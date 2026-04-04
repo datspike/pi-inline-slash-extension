@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "vitest"
+    "test": "vitest",
+    "verify:s01": "vitest --run tests/inline-slash/classifier.test.ts tests/inline-slash/command-catalog.test.ts tests/inline-slash/provider.test.ts tests/inline-slash/editor-smoke.test.ts"
   },
   "devDependencies": {
     "@types/node": "^24.8.1",

@@ -1,123 +1,128 @@
 # pi-inline-slash-extension
 
-Расширение для Pi / GSD, которое исправляет два раздражающих ограничения ввода в TUI.
+Shipped extension для Pi / GSD, который добавляет inline slash autocomplete внутри текста и bypass для leading absolute paths без форка core.
 
-## Проблемы
+<!-- verifier:readme/shipped-scope -->
+## Что реально shipped
 
-### 1. Slash / skill autocomplete работает только в начале сообщения
+- inline slash и skill autocomplete работает не только в начале первой строки, но и mid-line и на второй строке;
+- leading absolute path вроде `/home/spike/file.ts` и `/tmp/log.txt` уходит как обычное user message, а не как slash-команда;
+- start-of-line slash path первой строки остаётся delegated core behavior;
+- текущий scope доказан локальными тестами и shell verifier'ами, без upstream patch.
 
-Сейчас slash-autocomplete в Pi фактически ограничен началом первой строки редактора.
-Из-за этого команды и skill-команды приходится вводить руками, если они появляются не в самом начале сообщения.
+<!-- verifier:readme/architecture -->
+## Архитектура
 
-Примеры желаемого поведения:
-- `Сначала посмотри логи, потом /gsd doctor fix`
-- `Нужно включить навык /skill:create-skill и продолжить`
-- `Сравни это с /gsd help`
+Расширение подключается через `.gsd/extensions/inline-slash.ts` и активируется на `session_start` только при `ctx.hasUI`. Entry point:
 
-### 2. Абсолютный Linux-путь в начале сообщения ошибочно воспринимается как slash-команда
+1. строит public inline catalog через `buildCommandCatalog(api.getCommands())`;
+2. создаёт editor wrapper поверх `CustomEditor` через `createInlineSlashEditorClass(...)`;
+3. подключает submit strategy через `createInlineSlashSubmitStrategy(api)`;
+4. регистрирует новый editor через `ctx.ui.setEditorComponent(...)`.
 
-Если сообщение начинается с абсолютного пути, например:
-- `/home/spike/project/file.ts`
-- `/tmp/log.txt`
-- `/.config/app/config.json`
+Core не патчится: extension расширяет editor/runtime seams поверх публичного API и оставляет штатный first-line slash path в делегированном режиме.
 
-TUI пытается трактовать это как slash-команду, а не как путь к файлу. Это ломает UX и мешает нормальному вводу.
+<!-- verifier:readme/runtime-seams -->
+## Runtime seams
 
-## Цель
+| Файл | Роль в runtime | Что важно для truth-first описания |
+| --- | --- | --- |
+| `.gsd/extensions/inline-slash.ts` | wiring entrypoint | собирает каталог из `api.getCommands()` и ставит editor wrapper только в UI-сессии |
+| `src/inline-slash/command-catalog.ts` | public catalog builder | принимает только public команды из `pi.getCommands()` с source `extension`, `prompt`, `skill`; не притворяется полным built-in catalog |
+| `src/inline-slash/editor.ts` | editor wrapper | оборачивает `onSubmit`, прокидывает delegate autocomplete provider и после обычного `handleInput` обновляет inline slash suggestions |
+| `src/inline-slash/provider.ts` | autocomplete provider | делегирует start-of-message slash в core provider; mid-line и second-line slash строит из локального каталога |
+| `src/inline-slash/classifier.ts` | token classifier | различает command, `skill:*` и absolute-path candidate по текущему токену вокруг курсора |
+| `src/inline-slash/submit-routing.ts` | pure submit boundary | после `trim()` смотрит только на leading token и решает `delegate-core-submit` vs `send-user-message` |
+| `src/inline-slash/extension-submit-strategy.ts` | runtime submit shim | для absolute path добавляет запись в history и вызывает `sendUserMessage`; всё остальное отдаёт в core submit |
 
-Сделать расширение, которое:
-- разрешает slash-autocomplete не только в начале сообщения, но и внутри текста;
-- не путает абсолютные Linux-пути со slash-командами;
-- по возможности не требует форка `gsd-build/gsd-2`;
-- использует extension API Pi и кастомный editor, если этого достаточно.
+<!-- verifier:readme/verified-scenarios -->
+## Verified scenarios
 
-## Что уже известно
+### Automated proof
 
-По установленному `gsd-pi` и коду `gsd-build/gsd-2`:
+Автоматические проверки покрывают три слоя:
 
-- `packages/pi-tui/src/autocomplete.ts`
-  - slash suggestions включаются только если `textBeforeCursor.startsWith("/")`;
-- `packages/pi-tui/src/components/editor.ts`
-  - slash menu разрешён только на первой строке;
-  - slash context проверяется как начало строки после `trimStart()`;
-- `packages/pi-tui/src/__tests__/autocomplete.test.ts`
-  - есть явный тест `does not trigger slash commands mid-line`;
-- skill-команды сейчас регистрируются как `/skill:name`, а не как bare `/<skill>`.
+- `tests/inline-slash/provider.test.ts`
+  - `inline-gsd`, `inline-skill`, `second-line-gsd`;
+  - suppression для absolute paths;
+  - delegated first-line behavior;
+  - safe no-op на malformed bounds.
+- `tests/inline-slash/submit-routing.test.ts`
+  - bypass для `/home/...` и `/tmp/...`;
+  - delegated submit для `/gsd auto`, `/skill:create-skill demo`, `/unknown`, обычного текста и пустого буфера;
+  - routing смотрит только на leading token после `trim()`.
+- `tests/inline-slash/editor-smoke.test.ts`
+  - обычный typing cycle реально обновляет autocomplete на второй строке и mid-line;
+  - submit strategy вызывает `sendUserMessage` только для leading absolute path;
+  - loader-faithful smoke test импортирует `.gsd/extensions/inline-slash.ts` и проверяет wiring до `setEditorComponent`.
 
-## Гипотеза реализации
+### Что именно считается доказанным
 
-### Вариант A — extension без форка
+- `текст /gs` -> локальный inline catalog предлагает `/gsd`;
+- `текст /skill:create` -> локальный inline catalog предлагает `/skill:create-skill`;
+- вторая строка `/gs` -> autocomplete работает без first-line ограничения;
+- `/home/spike/file.ts` и `/tmp/log.txt` при submit bypass'ят slash dispatch;
+- `/gsd auto`, `/skill:create-skill demo` и `/unknown` остаются delegated core submit path.
 
-Сделать кастомный editor через `ctx.ui.setEditorComponent(...)`, который:
-- перехватывает текущий текст и позицию курсора;
-- выделяет текущий token вида `/...` не только в начале строки, но и после разделителя;
-- показывает dropdown для slash / skill completion внутри текста;
-- если token выглядит как абсолютный путь (`/home/...`, `/tmp/...`, `/.config/...`, любой `/segment/...` с повторным `/` до пробела), не включает режим slash-команды.
+<!-- verifier:readme/verification-commands -->
+## Verification surface
 
-Плюсы:
-- не надо патчить ядро;
-- можно выпустить как независимое расширение.
+### Top-level
 
-Минусы:
-- логика editor-level autocomplete будет сложнее;
-- возможно придётся дублировать часть поведения core autocomplete.
+```bash
+npm run verify:s03
+bash scripts/verify-s03.sh
+```
 
-### Вариант B — upstream patch
+`verify:s03` - единый discoverable entrypoint для этой milestone surface. Он композиционно прогоняет уже существующие proof surfaces и затем валидирует README markers.
 
-Если extension-путь окажется слишком хрупким, патчить upstream:
-- `packages/pi-tui/src/autocomplete.ts`
-- `packages/pi-tui/src/components/editor.ts`
-- тесты autocomplete / editor
+### Drill-down
 
-Но это уже отдельная ветка работы.
+```bash
+npm run verify:s01
+bash scripts/verify-s01.sh
+npm run verify:s02
+bash scripts/verify-s02.sh
+```
 
-## Минимальные требования к поведению
+- `verify:s01` - inline autocomplete, catalog и provider proof;
+- `verify:s02` - submit routing, editor smoke и `tsc --noEmit`;
+- `verify:s03` - orchestration поверх S01/S02 плюс README guard.
 
-### Slash внутри текста
+Automated proof и live runtime proof намеренно разделены: команды выше подтверждают кодовые инварианты, а ручной `/reload` checklist ниже подтверждает поведение в настоящем TUI.
 
-Должно работать:
-- `текст /gsd`
-- `текст /skill:create-skill`
-- `текст\nвторая строка /gsd`
+<!-- verifier:readme/manual-reload-checklist -->
+## Manual `/reload` checklist
 
-### Абсолютные пути
+После загрузки extension в Pi выполните `/reload` и проверьте следующие сценарии:
 
-Не должно считаться командой:
-- `/home/spike/file.ts`
-- `/tmp/test.log`
-- `/.config/nvim/init.lua`
-- `/var/log/syslog`
+- `scenario:inline-gsd-mid-line` -> введите `текст /gs` и убедитесь, что появляется `/gsd` autocomplete.
+- `scenario:inline-skill-mid-line` -> введите `текст /skill:create` и убедитесь, что появляется `/skill:create-skill`.
+- `scenario:second-line-gsd` -> на второй строке введите `/gs` и убедитесь, что появляется `/gsd`.
+- `scenario:path-home-submit-bypass` -> введите `/home/spike/file.ts` и отправьте Enter; ожидается обычное user message поведение без `Unknown command`.
+- `scenario:path-tmp-submit-bypass` -> введите `/tmp/log.txt` и отправьте Enter; ожидается тот же bypass через обычное сообщение.
+- `scenario:delegate-gsd-submit` -> в первой строке введите `/gsd auto` и отправьте Enter; ожидается штатный slash command path.
+- `scenario:delegate-skill-submit` -> в первой строке введите `/skill:create-skill demo` и отправьте Enter; ожидается штатный skill submit path.
+- `scenario:delegate-unknown-submit` -> в первой строке введите `/unknown` и отправьте Enter; ожидается core unknown-command handling, а не обычное user message.
 
-### Команды по-прежнему должны работать
+<!-- verifier:readme/proven-limitations -->
+## Proven limitations and boundaries
 
-Не ломаем:
-- `/gsd`
-- `/gsd auto`
-- `/skill:create-skill`
-- `/model`
-- `/thinking`
+- inline catalog строится только из public `pi.getCommands()`; extension не синтезирует и не обещает полный built-in slash catalog;
+- локальный каталог принимает только public sources `extension`, `prompt`, `skill`;
+- first-line start-of-message slash autocomplete остаётся delegated core behavior, а не локальной заменой core provider;
+- submit bypass смотрит только на leading token после `trim()`: абсолютный путь в начале сообщения bypass'ится, остальные случаи идут в `delegate-core-submit`;
+- `/unknown` намеренно остаётся delegated core unknown-command handling;
+- extension требует `sendUserMessage` только для absolute path bypass; отсутствие этого API считается wiring failure и падает явно;
+- extension не меняет core semantics для обычного текста и пустого submit.
 
-## Идеи для эвристики различения command vs path
+<!-- verifier:readme/upstream-patch-plan -->
+## Upstream patch plan
 
-Базовая идея:
-- если token начинается с `/` и до первого пробела содержит второй `/`, это кандидат в абсолютный путь, а не в slash-команду;
-- исключение: известные slash-команды и `command:arg`-формы вроде `/skill:create-skill`;
-- если token совпадает с известной командой или её префиксом без дополнительного `/`, это slash-команда;
-- если token похож на filesystem path, отдаём его path/autocomplete-логике.
+Для shipped scope upstream patch сейчас не требуется. Текущая реализация и tests доказывают нужное поведение на extension layer.
 
-Черновое правило:
-- slash-команда: `/gsd`, `/skill:create-skill`, `/model`, `/thinking high`
-- путь: `/home/spike/x`, `/tmp/x`, `/usr/bin/env`, `/.config/app`
+Повод возвращаться к upstream patch появится только если future scope потребует хотя бы одно из следующего:
 
-## Предлагаемая структура проекта
-
-- `README.md` — контекст и цели
-- `NEW-CHAT-PROMPT.md` — стартовый промпт для нового чата
-- далее по мере реализации:
-  - `src/` — код extension
-  - `notes/` — исследования / ссылки / эксперименты
-  - `tests/` — сценарии и регрессии
-
-## Результат этого шага
-
-Создан стартовый каталог проекта с описанием задачи и отдельным промптом для следующего чата.
+- inline autocomplete для built-in команд, которых нет в public `pi.getCommands()`;
+- изменение core unknown-command handling для `/unknown`;
+- изменение штатного first-line slash behavior вместо делегирования в core.

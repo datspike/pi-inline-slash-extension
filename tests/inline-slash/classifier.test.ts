@@ -67,6 +67,22 @@ describe("analyzeSlashToken", () => {
     });
   });
 
+  test("start-of-line-skill-arg: сохраняет /skill:create-skill demo как skill token", () => {
+    /** start-of-line-skill-arg: trailing argument не должен менять классификацию первого токена. */
+    const text = "/skill:create-skill demo";
+    const token = "/skill:create-skill";
+
+    expect(analyzeSlashToken(text, token.length)).toEqual({
+      status: "match",
+      kind: "skill",
+      bounds: { start: 0, end: token.length },
+      replacement: { start: 0, end: token.length },
+      token,
+      query: "skill:create-skill",
+      isAbsolutePathCandidate: false,
+    });
+  });
+
   test("path-home-candidate: помечает /home/... как absolute path candidate", () => {
     /** path-home-candidate: абсолютный путь не должен превращаться в slash-команду. */
     const text = "/home/spike/file.ts";
@@ -96,6 +112,39 @@ describe("analyzeSlashToken", () => {
       query: "tmp/log.txt",
       isAbsolutePathCandidate: true,
       reason: "contains-path-separator",
+    });
+  });
+
+  test("unknown-command-shape-boundary: синтаксически валидный /unknown остаётся command match", () => {
+    /** unknown-command-shape-boundary: classifier различает форму токена, а не наличие runtime-команды в каталоге. */
+    expect(analyzeSlashToken("/unknown", "/unknown".length)).toEqual({
+      status: "match",
+      kind: "command",
+      bounds: { start: 0, end: "/unknown".length },
+      replacement: { start: 0, end: "/unknown".length },
+      token: "/unknown",
+      query: "unknown",
+      isAbsolutePathCandidate: false,
+    });
+  });
+
+  test("malformed-unknown-shape-boundary: возвращает no-match для неподдерживаемого slash token", () => {
+    /** malformed-unknown-shape-boundary: slash с недопустимой формой должен оставаться no-match. */
+    expect(analyzeSlashToken("/bad_token", "/bad_token".length)).toEqual({
+      status: "no-match",
+      kind: "none",
+      reason: "unrecognized-token",
+      isAbsolutePathCandidate: false,
+    });
+  });
+
+  test("lone-slash-boundary: возвращает no-match для одинокого slash", () => {
+    /** lone-slash-boundary: single slash не должен угадываться ни как команда, ни как path. */
+    expect(analyzeSlashToken("/", 1)).toEqual({
+      status: "no-match",
+      kind: "none",
+      reason: "token-too-short",
+      isAbsolutePathCandidate: false,
     });
   });
 

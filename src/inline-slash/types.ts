@@ -51,6 +51,15 @@ export type SlashTokenAnalysis =
   | SlashAbsolutePathCandidate
   | SlashNoMatch;
 
+export type SubmitRoute = "delegate-core-submit" | "send-user-message";
+
+export interface SubmitRoutingResult {
+  route: SubmitRoute;
+  preparedText: string;
+  leadingToken: string;
+  analysis: SlashTokenAnalysis;
+}
+
 export interface AutocompleteItemLike {
   value: string;
   label: string;

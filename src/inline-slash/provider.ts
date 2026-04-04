@@ -116,7 +116,7 @@ function filterCatalog(catalog: InlineSlashCatalog, query: string): Autocomplete
   const normalizedQuery = query.toLowerCase();
 
   return catalog.entries
-    .filter((entry) => entry.queryKey.startsWith(normalizedQuery))
+    .filter((entry) => entry.matchKeys.some((matchKey) => matchKey.startsWith(normalizedQuery)))
     .map((entry) => ({
       value: entry.insertText,
       label: entry.label,

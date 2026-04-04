@@ -107,6 +107,7 @@ export interface PublicSlashCommandInfo {
 export interface InlineSlashCatalogEntry {
   name: string;
   queryKey: string;
+  matchKeys: string[];
   label: string;
   insertText: string;
   description?: string;

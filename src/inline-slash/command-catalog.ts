@@ -6,6 +6,7 @@ import type {
 } from "./types.js";
 
 const SUPPORTED_SOURCES = new Set<PublicSlashCommandSource>(["extension", "prompt", "skill"]);
+const SKILL_PREFIX = "skill:";
 
 export const PUBLIC_COMMAND_CATALOG_NOTE =
   "Каталог строится только из public `pi.getCommands()` и сознательно не притворяется полным built-in slash catalog.";
@@ -22,6 +23,23 @@ function isNonEmptyString(value: unknown): value is string {
  */
 function normalizeCommandName(name: string): string {
   return name.trim().replace(/^\/+/, "");
+}
+
+/**
+ * Построение списка match alias для каталога autocomplete.
+ */
+function buildMatchKeys(name: string, source: PublicSlashCommandSource): string[] {
+  const matchKeys = new Set<string>([name.toLowerCase()]);
+
+  if (source === "skill" && name.toLowerCase().startsWith(SKILL_PREFIX)) {
+    const shortAlias = name.slice(SKILL_PREFIX.length).trim().toLowerCase();
+
+    if (shortAlias.length > 0) {
+      matchKeys.add(shortAlias);
+    }
+  }
+
+  return [...matchKeys];
 }
 
 /**
@@ -46,6 +64,7 @@ function toCatalogEntry(rawCommand: unknown): InlineSlashCatalogEntry | null {
     return null;
   }
 
+  const source = command.source as PublicSlashCommandSource;
   const name = normalizeCommandName(command.name);
 
   if (name.length === 0 || /\s/.test(name)) {
@@ -57,10 +76,11 @@ function toCatalogEntry(rawCommand: unknown): InlineSlashCatalogEntry | null {
   return {
     name,
     queryKey: name.toLowerCase(),
+    matchKeys: buildMatchKeys(name, source),
     label: `/${name}`,
     insertText: `/${name}`,
     description,
-    source: command.source as PublicSlashCommandSource,
+    source,
     location: command.location,
     path: command.path,
   };

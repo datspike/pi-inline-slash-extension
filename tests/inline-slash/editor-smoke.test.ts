@@ -258,6 +258,7 @@ function createCatalog() {
   return buildCommandCatalog([
     { name: "gsd", source: "extension", description: "GSD helper" },
     { name: "skill:create-skill", source: "skill", description: "Create skill" },
+    { name: "skill:commit-list", source: "skill", description: "Create commit plan" },
   ]);
 }
 
@@ -404,6 +405,25 @@ describe("InlineSlashEditor smoke collaboration", () => {
         },
       ],
       prefix: "/skill:create-",
+    });
+  });
+
+  test("inline-short-skill-refresh: short /commit даёт canonical skill suggestion", () => {
+    /** inline-short-skill-refresh: plain short skill alias должен работать как в upstream skill autocomplete. */
+    const editor = createEditor(createDelegate(null));
+
+    editor.setText("Нужно вызвать /commit");
+    editor.handleInput("-");
+
+    expect(editor.lastSuggestions).toEqual({
+      items: [
+        {
+          value: "/skill:commit-list",
+          label: "/skill:commit-list",
+          description: "Create commit plan",
+        },
+      ],
+      prefix: "/commit-",
     });
   });
 

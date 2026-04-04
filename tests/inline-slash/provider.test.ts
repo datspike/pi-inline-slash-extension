@@ -18,6 +18,7 @@ function createCatalog() {
     { name: "gsd", source: "extension", description: "GSD helper" },
     { name: "daily", source: "prompt", description: "Daily prompt" },
     { name: "skill:create-skill", source: "skill", description: "Create skill" },
+    { name: "skill:commit-list", source: "skill", description: "Create commit plan" },
   ]);
 }
 
@@ -82,6 +83,23 @@ describe("InlineSlashProvider.getSuggestions", () => {
         },
       ],
       prefix: "/skill:create",
+    });
+  });
+
+  test("inline-skill-short-alias: short /commit-list матчит canonical skill entry", () => {
+    /** inline-skill-short-alias: short skill alias должен находить canonical `/skill:*` completion. */
+    const provider = new InlineSlashProvider({ catalog: createCatalog() });
+    const line = "Нужно включить /commit";
+
+    expect(provider.getSuggestions([line], 0, line.length)).toEqual({
+      items: [
+        {
+          value: "/skill:commit-list",
+          label: "/skill:commit-list",
+          description: "Create commit plan",
+        },
+      ],
+      prefix: "/commit",
     });
   });
 

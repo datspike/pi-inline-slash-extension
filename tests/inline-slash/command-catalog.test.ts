@@ -24,6 +24,7 @@ describe("buildCommandCatalog", () => {
         {
           name: "daily",
           queryKey: "daily",
+          matchKeys: ["daily"],
           label: "/daily",
           insertText: "/daily",
           description: "Daily prompt",
@@ -34,6 +35,7 @@ describe("buildCommandCatalog", () => {
         {
           name: "gsd",
           queryKey: "gsd",
+          matchKeys: ["gsd"],
           label: "/gsd",
           insertText: "/gsd",
           description: "GSD helper",
@@ -44,6 +46,7 @@ describe("buildCommandCatalog", () => {
         {
           name: "skill:create-skill",
           queryKey: "skill:create-skill",
+          matchKeys: ["skill:create-skill", "create-skill"],
           label: "/skill:create-skill",
           insertText: "/skill:create-skill",
           description: "Create skill",
@@ -72,10 +75,32 @@ describe("buildCommandCatalog", () => {
       {
         name: "gsd",
         queryKey: "gsd",
+        matchKeys: ["gsd"],
         label: "/gsd",
         insertText: "/gsd",
         description: "Первая запись",
         source: "extension",
+        location: undefined,
+        path: undefined,
+      },
+    ]);
+  });
+
+  test("skill-short-alias: добавляет plain alias для skill:* без смены canonical insertText", () => {
+    /** skill-short-alias: short alias нужен только для поиска, а не для смены submit form. */
+    const catalog = buildCommandCatalog([
+      { name: "skill:commit-list", source: "skill", description: "Commit planner" },
+    ]);
+
+    expect(catalog.entries).toEqual([
+      {
+        name: "skill:commit-list",
+        queryKey: "skill:commit-list",
+        matchKeys: ["skill:commit-list", "commit-list"],
+        label: "/skill:commit-list",
+        insertText: "/skill:commit-list",
+        description: "Commit planner",
+        source: "skill",
         location: undefined,
         path: undefined,
       },

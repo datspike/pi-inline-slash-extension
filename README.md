@@ -22,6 +22,81 @@ Shipped extension для Pi / GSD, который добавляет inline slas
 
 Core не патчится: extension расширяет editor/runtime seams поверх публичного API и оставляет штатный first-line slash path в делегированном режиме.
 
+## Как подключить расширение к агенту
+
+### Разовый запуск из checkout этого репозитория
+
+Если хотите проверить поведение без копирования файлов, запустите агент с явным путём к entrypoint:
+
+```bash
+gsd --extension "$PWD/.gsd/extensions/inline-slash.ts"
+```
+
+После старта откройте UI-сессию и выполните `/reload`, чтобы прогнать сценарии из checklist ниже.
+
+### Постоянное project-local подключение
+
+Pi auto-discovery ищет project-local extensions в `.pi/extensions/`, а не в `.gsd/extensions/`. Для постоянного подключения в этом репозитории удобнее сделать shim или symlink на shipped entrypoint:
+
+```bash
+mkdir -p .pi/extensions
+ln -sf ../../.gsd/extensions/inline-slash.ts .pi/extensions/inline-slash.ts
+```
+
+После этого агент можно запускать обычной командой `gsd`. Если Pi напишет, что project-local extensions пропущены из-за trust gate, сначала доверьте проект, затем перезапустите сессию и выполните `/reload`.
+
+### Подключение через глобальные настройки
+
+Если хотите подключать extension во всех сессиях без `--extension`, добавьте абсолютный путь к entrypoint в глобальный settings файл агента.
+
+#### Для GSD
+
+Глобальный файл настроек:
+
+```json
+~/.gsd/agent/settings.json
+```
+
+Минимальный пример:
+
+```json
+{
+  "extensions": [
+    "/absolute/path/to/pi-inline-slash-extension/.gsd/extensions/inline-slash.ts"
+  ]
+}
+```
+
+#### Для базового Pi
+
+Если вы запускаете не `gsd`, а базовый `pi`, тот же механизм живёт в другом config dir:
+
+```json
+~/.pi/agent/settings.json
+```
+
+Минимальный пример:
+
+```json
+{
+  "extensions": [
+    "/absolute/path/to/pi-inline-slash-extension/.gsd/extensions/inline-slash.ts"
+  ]
+}
+```
+
+Замечания:
+
+- используйте именно абсолютный путь;
+- если в `settings.json` уже есть другие поля, просто добавьте или расширьте массив `extensions`;
+- после изменения глобальных настроек перезапустите агент и выполните `/reload` в UI-сессии.
+
+### Что считать успешным подключением
+
+- агент стартует без ошибки импорта `.gsd/extensions/inline-slash.ts`;
+- в UI-сессии после `/reload` работает сценарий `текст /gs` -> появляется `/gsd` autocomplete;
+- submit `'/home/spike/file.ts'` больше не идёт в `Unknown command`, а остаётся обычным user message.
+
 <!-- verifier:readme/runtime-seams -->
 ## Runtime seams
 

@@ -4,8 +4,12 @@ import { pathToFileURL } from "node:url";
 
 import { describe, expect, test, vi } from "vitest";
 
+import { createInlineSlashSubmitStrategy } from "../../src/inline-slash/extension-submit-strategy.js";
 import { buildCommandCatalog } from "../../src/inline-slash/command-catalog.js";
-import { createInlineSlashEditorClass } from "../../src/inline-slash/editor.js";
+import {
+  createInlineSlashEditorClass,
+  type InlineSlashSubmitStrategy,
+} from "../../src/inline-slash/editor.js";
 import type {
   AutocompleteApplyResult,
   AutocompleteItemLike,
@@ -14,13 +18,14 @@ import type {
 } from "../../src/inline-slash/types.js";
 
 /**
- * Минимальный autocomplete harness, который имитирует core editor cycle.
+ * Минимальный autocomplete и submit harness, который имитирует core editor cycle.
  */
 class FakeCustomEditor {
   private lines = [""];
   private cursorLine = 0;
   private cursorCol = 0;
   private provider: AutocompleteProviderLike | null = null;
+  private history: string[] = [];
 
   public autocompletePrefix = "";
   public onSubmit?: (text: string) => void;
@@ -54,6 +59,30 @@ class FakeCustomEditor {
   }
 
   /**
+   * История отправок для parity assertions.
+   */
+  getHistory(): string[] {
+    return [...this.history];
+  }
+
+  /**
+   * Добавление submit в историю по тем же правилам, что и у core editor.
+   */
+  addToHistory(text: string): void {
+    const trimmed = text.trim();
+
+    if (!trimmed) {
+      return;
+    }
+
+    if (this.history[0] === trimmed) {
+      return;
+    }
+
+    this.history.unshift(trimmed);
+  }
+
+  /**
    * Прямое задание текста без side effects.
    */
   setText(text: string): void {
@@ -75,6 +104,21 @@ class FakeCustomEditor {
    */
   isShowingAutocomplete(): boolean {
     return this.lastSuggestions !== null;
+  }
+
+  /**
+   * Имитация core editor submit cycle с очисткой буфера до вызова callback.
+   */
+  submit(): void {
+    const result = this.getText().trim();
+
+    this.lines = [""];
+    this.cursorLine = 0;
+    this.cursorCol = 0;
+    this.lastSuggestions = null;
+    this.autocompletePrefix = "";
+    this.onChange?.(this.getText());
+    this.onSubmit?.(result);
   }
 
   /**
@@ -255,8 +299,12 @@ function createDelegate(
 function createEditor(
   provider?: AutocompleteProviderLike,
   catalog = createCatalog(),
+  submitStrategy?: InlineSlashSubmitStrategy,
 ): FakeCustomEditor {
-  const InlineSlashEditor = createInlineSlashEditorClass(FakeCustomEditor, { catalog });
+  const InlineSlashEditor = createInlineSlashEditorClass(FakeCustomEditor, {
+    catalog,
+    submitStrategy,
+  });
   const editor = new InlineSlashEditor();
 
   if (provider) {
@@ -264,6 +312,34 @@ function createEditor(
   }
 
   return editor;
+}
+
+/**
+ * Сборка submit harness поверх реального extension submit strategy.
+ */
+function createSubmitHarness(options?: {
+  sendUserMessage?: (text: string) => void;
+}): {
+  editor: FakeCustomEditor;
+  coreOnSubmit: ReturnType<typeof vi.fn>;
+  sendUserMessage: ReturnType<typeof vi.fn>;
+} {
+  const sendUserMessage = vi.fn(options?.sendUserMessage ?? (() => undefined));
+  const submitStrategy = createInlineSlashSubmitStrategy({
+    sendUserMessage,
+  } as Parameters<typeof createInlineSlashSubmitStrategy>[0]);
+  const editor = createEditor(undefined, createCatalog(), submitStrategy);
+  const coreOnSubmit = vi.fn((text: string) => {
+    if (!text) {
+      return;
+    }
+
+    editor.addToHistory(text);
+  });
+
+  editor.onSubmit = coreOnSubmit;
+
+  return { editor, coreOnSubmit, sendUserMessage };
 }
 
 /**
@@ -377,6 +453,100 @@ describe("InlineSlashEditor smoke collaboration", () => {
   });
 });
 
+describe("InlineSlashEditor submit routing smoke", () => {
+  test("submit-home-path-bypass: /home path уходит через sendUserMessage и не вызывает core submit", () => {
+    /** submit-home-path-bypass: leading absolute path bypass'ит core callback, но сохраняет clear/history parity. */
+    const { editor, coreOnSubmit, sendUserMessage } = createSubmitHarness();
+
+    editor.setText("/home/spike/file.ts");
+    editor.submit();
+
+    expect(sendUserMessage).toHaveBeenCalledOnce();
+    expect(sendUserMessage).toHaveBeenCalledWith("/home/spike/file.ts");
+    expect(coreOnSubmit).not.toHaveBeenCalled();
+    expect(editor.getText()).toBe("");
+    expect(editor.getHistory()).toEqual(["/home/spike/file.ts"]);
+  });
+
+  test("submit-tmp-path-bypass: /tmp path повторно идёт через bypass без stale submit state", () => {
+    /** submit-tmp-path-bypass: второй absolute-path сценарий должен работать как обычное user message submit. */
+    const { editor, coreOnSubmit, sendUserMessage } = createSubmitHarness();
+
+    editor.setText("/tmp/log.txt");
+    editor.submit();
+    editor.setText("/tmp/log.txt");
+    editor.submit();
+
+    expect(sendUserMessage).toHaveBeenCalledTimes(2);
+    expect(sendUserMessage).toHaveBeenNthCalledWith(1, "/tmp/log.txt");
+    expect(sendUserMessage).toHaveBeenNthCalledWith(2, "/tmp/log.txt");
+    expect(coreOnSubmit).not.toHaveBeenCalled();
+    expect(editor.getText()).toBe("");
+    expect(editor.getHistory()).toEqual(["/tmp/log.txt"]);
+  });
+
+  test("submit-gsd-delegate: /gsd auto остаётся delegated core submit", () => {
+    /** submit-gsd-delegate: реальная slash-команда не должна уходить через обычный user-message bypass. */
+    const { editor, coreOnSubmit, sendUserMessage } = createSubmitHarness();
+
+    editor.setText("/gsd auto");
+    editor.submit();
+
+    expect(sendUserMessage).not.toHaveBeenCalled();
+    expect(coreOnSubmit).toHaveBeenCalledOnce();
+    expect(coreOnSubmit).toHaveBeenCalledWith("/gsd auto");
+    expect(editor.getText()).toBe("");
+    expect(editor.getHistory()).toEqual(["/gsd auto"]);
+  });
+
+  test("submit-skill-delegate: /skill:create-skill demo остаётся delegated core submit", () => {
+    /** submit-skill-delegate: skill submit path должен остаться на upstream command dispatcher. */
+    const { editor, coreOnSubmit, sendUserMessage } = createSubmitHarness();
+
+    editor.setText("/skill:create-skill demo");
+    editor.submit();
+
+    expect(sendUserMessage).not.toHaveBeenCalled();
+    expect(coreOnSubmit).toHaveBeenCalledOnce();
+    expect(coreOnSubmit).toHaveBeenCalledWith("/skill:create-skill demo");
+    expect(editor.getText()).toBe("");
+    expect(editor.getHistory()).toEqual(["/skill:create-skill demo"]);
+  });
+
+  test("submit-unknown-delegate: /unknown остаётся delegated core submit guard-case", () => {
+    /** submit-unknown-delegate: syntactic unknown slash должен дойти до core unknown-command handling. */
+    const { editor, coreOnSubmit, sendUserMessage } = createSubmitHarness();
+
+    editor.setText("/unknown");
+    editor.submit();
+
+    expect(sendUserMessage).not.toHaveBeenCalled();
+    expect(coreOnSubmit).toHaveBeenCalledOnce();
+    expect(coreOnSubmit).toHaveBeenCalledWith("/unknown");
+    expect(editor.getText()).toBe("");
+    expect(editor.getHistory()).toEqual(["/unknown"]);
+  });
+
+  test("missing-sender-hard-failure: path bypass без sendUserMessage падает явно", () => {
+    /** missing-sender-hard-failure: broken runtime wiring не должен молча делегировать absolute path в core submit. */
+    const submitStrategy = createInlineSlashSubmitStrategy({
+      sendUserMessage: undefined,
+    } as Parameters<typeof createInlineSlashSubmitStrategy>[0]);
+    const editor = createEditor(undefined, createCatalog(), submitStrategy);
+    const coreOnSubmit = vi.fn();
+
+    editor.onSubmit = coreOnSubmit;
+    editor.setText("/home/spike/file.ts");
+
+    expect(() => editor.submit()).toThrowError(
+      "Inline slash extension requires api.sendUserMessage for absolute path submit bypass.",
+    );
+    expect(coreOnSubmit).not.toHaveBeenCalled();
+    expect(editor.getText()).toBe("");
+    expect(editor.getHistory()).toEqual([]);
+  });
+});
+
 describe("inline slash extension entrypoint", () => {
   test("entrypoint-loader: loader импортирует ts entrypoint и wiring доходит до setEditorComponent", async () => {
     /** entrypoint-loader: smoke proof должен падать на broken entrypoint, а не молча обходить его. */
@@ -387,19 +557,21 @@ describe("inline slash extension entrypoint", () => {
         api: {
           on(event: string, handler: (event: unknown, ctx: any) => void): void;
           getCommands(): unknown[];
+          sendUserMessage(text: string): void;
         },
       ) => void;
     } | ((
       api: {
         on(event: string, handler: (event: unknown, ctx: any) => void): void;
         getCommands(): unknown[];
+        sendUserMessage(text: string): void;
       },
     ) => void);
     const activate = typeof loaded === "function" ? loaded : loaded.default;
 
     const handlers = new Map<string, (event: unknown, ctx: any) => void>();
     let editorFactory:
-      | ((tui: unknown, theme: unknown, keybindings: unknown) => { setAutocompleteProvider: unknown; handleInput: unknown })
+      | ((tui: unknown, theme: unknown, keybindings: unknown) => { setAutocompleteProvider: unknown; handleInput: unknown; onSubmit: unknown })
       | undefined;
 
     expect(activate).toBeTypeOf("function");
@@ -414,6 +586,7 @@ describe("inline slash extension entrypoint", () => {
           { name: "skill:create-skill", source: "skill", description: "Create skill" },
         ];
       },
+      sendUserMessage() {},
     });
 
     const sessionStartHandler = handlers.get("session_start");
@@ -435,5 +608,6 @@ describe("inline slash extension entrypoint", () => {
     expect(editor).toBeDefined();
     expect(editor?.setAutocompleteProvider).toBeTypeOf("function");
     expect(editor?.handleInput).toBeTypeOf("function");
+    expect(editor?.onSubmit).toBeTypeOf("function");
   });
 });

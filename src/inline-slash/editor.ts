@@ -3,6 +3,7 @@ import type { AutocompleteProviderLike, InlineSlashCatalog } from "./types.js";
 
 export interface InlineSlashEditorOptions {
   catalog: InlineSlashCatalog;
+  submitStrategy?: InlineSlashSubmitStrategy;
 }
 
 export interface EditorCursorPosition {
@@ -23,7 +24,20 @@ export interface InlineSlashEditorBase {
   getCursor?(): EditorCursorPosition;
   handleInput(data: string): void;
   setAutocompleteProvider(provider: AutocompleteProviderLike): void;
+  addToHistory?(text: string): void;
+  onSubmit?: (text: string) => void;
+  onChange?: (text: string) => void;
 }
+
+export interface InlineSlashSubmitStrategyContext {
+  text: string;
+  editor: InlineSlashEditorBase;
+  delegateCoreSubmit: (text: string) => void;
+}
+
+export type InlineSlashSubmitStrategy = (
+  context: InlineSlashSubmitStrategyContext,
+) => void;
 
 interface InlineSlashEditorInternals {
   state?: {
@@ -39,6 +53,39 @@ interface InlineSlashEditorInternals {
 }
 
 type InlineSlashEditorConstructor = new (...args: any[]) => InlineSlashEditorBase;
+
+/**
+ * Установка submit shim поверх instance property, потому что base Editor держит own field `onSubmit`.
+ */
+function installSubmitStrategy(
+  editor: InlineSlashEditorBase,
+  submitStrategy?: InlineSlashSubmitStrategy,
+): void {
+  if (!submitStrategy) {
+    return;
+  }
+
+  let delegateCoreSubmit = editor.onSubmit;
+  const wrappedSubmit = (text: string): void => {
+    submitStrategy({
+      text,
+      editor,
+      delegateCoreSubmit: (preparedText: string) => {
+        delegateCoreSubmit?.(preparedText);
+      },
+    });
+  };
+
+  Reflect.deleteProperty(editor, "onSubmit");
+  Object.defineProperty(editor, "onSubmit", {
+    configurable: true,
+    enumerable: true,
+    get: () => wrappedSubmit,
+    set: (handler: ((text: string) => void) | undefined) => {
+      delegateCoreSubmit = handler;
+    },
+  });
+}
 
 /**
  * Снимок текущего текста и курсора из editor seam без зависимости от runtime Pi.
@@ -175,6 +222,11 @@ export function createInlineSlashEditorClass<TBase extends InlineSlashEditorCons
     private inlineSlashProvider = new InlineSlashProvider({
       catalog: options.catalog,
     });
+
+    constructor(...args: any[]) {
+      super(...args);
+      installSubmitStrategy(this, options.submitStrategy);
+    }
 
     /**
      * Перехват core autocomplete provider и обёртка его локальным inline provider.

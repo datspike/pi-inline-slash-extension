@@ -50,3 +50,64 @@ export type SlashTokenAnalysis =
   | SlashSkillMatch
   | SlashAbsolutePathCandidate
   | SlashNoMatch;
+
+export interface AutocompleteItemLike {
+  value: string;
+  label: string;
+  description?: string;
+}
+
+export interface AutocompleteSuggestions {
+  items: AutocompleteItemLike[];
+  prefix: string;
+}
+
+export interface AutocompleteApplyResult {
+  lines: string[];
+  cursorLine: number;
+  cursorCol: number;
+}
+
+export interface AutocompleteProviderLike {
+  getSuggestions(
+    lines: string[],
+    cursorLine: number,
+    cursorCol: number,
+  ): AutocompleteSuggestions | null;
+  applyCompletion(
+    lines: string[],
+    cursorLine: number,
+    cursorCol: number,
+    item: AutocompleteItemLike,
+    prefix: string,
+  ): AutocompleteApplyResult;
+}
+
+export type PublicSlashCommandSource = "extension" | "prompt" | "skill";
+
+export type PublicSlashCommandLocation = "user" | "project" | "path";
+
+export interface PublicSlashCommandInfo {
+  name: string;
+  description?: string;
+  source: PublicSlashCommandSource;
+  location?: PublicSlashCommandLocation;
+  path?: string;
+}
+
+export interface InlineSlashCatalogEntry {
+  name: string;
+  queryKey: string;
+  label: string;
+  insertText: string;
+  description?: string;
+  source: PublicSlashCommandSource;
+  location?: PublicSlashCommandLocation;
+  path?: string;
+}
+
+export interface InlineSlashCatalog {
+  scope: "extension-api-public";
+  note: string;
+  entries: InlineSlashCatalogEntry[];
+}

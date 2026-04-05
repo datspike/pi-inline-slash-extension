@@ -5,6 +5,11 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
@@ -24,3 +29,6 @@ jobs:
 
       - name: Run verification surface
         run: npm run verify:s03
+
+      - name: Check publish payload
+        run: npm pack --dry-run

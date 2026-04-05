@@ -4,7 +4,6 @@ set -euo pipefail
 readonly VERIFY_LABEL="verify:s02"
 readonly REQUIRED_FILES=(
   "extensions/inline-slash.ts"
-  ".pi/extensions/inline-slash.ts"
   "src/inline-slash/classifier.ts"
   "src/inline-slash/editor.ts"
   "tests/inline-slash/editor-smoke.test.ts"

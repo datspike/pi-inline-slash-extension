@@ -8,7 +8,6 @@ readonly REQUIRED_FILES=(
   "README.md"
   "package.json"
   "extensions/inline-slash.ts"
-  ".pi/extensions/inline-slash.ts"
   "docs/UPSTREAM-SEAMS.md"
   "src/inline-slash/classifier.ts"
   "src/inline-slash/command-catalog.ts"
@@ -31,7 +30,7 @@ require_fixed_pattern() {
   local pattern="$1"
   local description="$2"
 
-  if ! rg -F -q -- "$pattern" README.md; then
+  if ! grep -F -q -- "$pattern" README.md; then
     fail "README.md: missing ${description} (${pattern})"
   fi
 }
@@ -40,7 +39,7 @@ forbid_pattern() {
   local pattern="$1"
   local description="$2"
 
-  if rg -q -- "$pattern" README.md; then
+  if grep -F -q -- "$pattern" README.md; then
     fail "README.md: found outdated ${description} (${pattern})"
   fi
 }
@@ -51,15 +50,15 @@ for required_file in "${REQUIRED_FILES[@]}"; do
   fi
 done
 
-if ! rg -q '"verify:s01"' package.json; then
+if ! grep -F -q '"verify:s01"' package.json; then
   fail "missing package.json script 'verify:s01'"
 fi
 
-if ! rg -q '"verify:s02"' package.json; then
+if ! grep -F -q '"verify:s02"' package.json; then
   fail "missing package.json script 'verify:s02'"
 fi
 
-if ! rg -q '"verify:s03"' package.json; then
+if ! grep -F -q '"verify:s03"' package.json; then
   fail "missing package.json script 'verify:s03'"
 fi
 
@@ -79,7 +78,6 @@ require_fixed_pattern "<!-- verifier:readme/manual-reload-checklist -->" "marker
 require_fixed_pattern "<!-- verifier:readme/proven-limitations -->" "marker proven-limitations"
 require_fixed_pattern "<!-- verifier:readme/upstream-patch-plan -->" "marker upstream-patch-plan"
 
-require_fixed_pattern '`.pi/extensions/inline-slash.ts`' "project shim seam"
 require_fixed_pattern '`extensions/inline-slash.ts`' "package entrypoint seam"
 require_fixed_pattern '`src/inline-slash/editor.ts`' "editor seam"
 require_fixed_pattern '`src/inline-slash/command-catalog.ts`' "command catalog seam"

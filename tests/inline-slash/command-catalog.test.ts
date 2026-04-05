@@ -19,7 +19,7 @@ describe("buildCommandCatalog", () => {
         name: "gsd",
         source: "extension",
         description: "GSD helper",
-        sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+        sourceInfo: sourceInfo("project", "extensions/inline-slash.ts"),
       },
       {
         name: "daily",
@@ -57,7 +57,7 @@ describe("buildCommandCatalog", () => {
           insertText: "/gsd",
           description: "GSD helper",
           source: "extension",
-          sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+          sourceInfo: sourceInfo("project", "extensions/inline-slash.ts"),
         },
         {
           name: "skill:create-skill",
@@ -80,7 +80,7 @@ describe("buildCommandCatalog", () => {
         name: "gsd",
         source: "extension",
         description: "First entry",
-        sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+        sourceInfo: sourceInfo("project", "extensions/inline-slash.ts"),
       },
       {
         name: "/gsd",
@@ -106,7 +106,7 @@ describe("buildCommandCatalog", () => {
         insertText: "/gsd",
         description: "First entry",
         source: "extension",
-        sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+        sourceInfo: sourceInfo("project", "extensions/inline-slash.ts"),
       },
     ]);
   });

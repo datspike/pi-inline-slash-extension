@@ -5,11 +5,18 @@
   "private": false,
   "type": "module",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/datspike/pi-inline-slash-extension.git"
+  },
+  "homepage": "https://github.com/datspike/pi-inline-slash-extension#readme",
+  "bugs": {
+    "url": "https://github.com/datspike/pi-inline-slash-extension/issues"
+  },
   "keywords": ["pi-package", "pi", "extension", "autocomplete", "slash-commands"],
   "files": [
     "extensions",
     "src",
-    ".pi/extensions/inline-slash.ts",
     "docs/UPSTREAM-SEAMS.md",
     "README.md",
     "LICENSE"

@@ -10,20 +10,20 @@ Shipped extension for Pi that adds inline slash autocomplete inside regular text
 - the first-line start-of-line slash path remains delegated core behavior;
 - the current scope is proven by local tests and shell verifiers, without an upstream patch.
 
-## Two usage modes
-
-### Local workaround
-
-The main practical mode for this repository is a project-local workaround through `.pi/extensions/inline-slash.ts`. It is useful when you need a narrow UX fix without waiting for changes in Pi core.
+## Usage modes
 
 ### Ecosystem package
 
-The extension is also packaged as a Pi package entrypoint through `extensions/inline-slash.ts` and `package.json -> pi.extensions`. That makes the package installable in the Pi ecosystem, but it does not change the fact that inline autocomplete still depends on part of the editor runtime seam that is not yet formalized as a stable public API.
+The extension is packaged as a Pi package entrypoint through `extensions/inline-slash.ts` and `package.json -> pi.extensions`. That makes the package installable in the Pi ecosystem, but it does not change the fact that inline autocomplete still depends on part of the editor runtime seam that is not yet formalized as a stable public API.
+
+### Global extension path
+
+If you prefer not to install the package, you can point Pi directly at `extensions/inline-slash.ts` from a global extension directory or settings-based extension path. This repository intentionally treats the package entrypoint as the only shipped runtime entrypoint.
 
 <!-- verifier:readme/architecture -->
 ## Architecture
 
-The extension is wired through the package entrypoint `extensions/inline-slash.ts`, while the project-local shim `.pi/extensions/inline-slash.ts` only re-exports it. Activation happens on `session_start` only when `ctx.hasUI` is true.
+The extension is wired through the package entrypoint `extensions/inline-slash.ts`. Activation happens on `session_start` only when `ctx.hasUI` is true.
 
 Entry point:
 
@@ -36,16 +36,6 @@ Core is not patched: the extension extends the editor/runtime seam on top of pub
 
 ## How to connect the extension to Pi
 
-### Project-local setup
-
-Pi auto-discovery looks for project-local extensions in `.pi/extensions/`. In this repository the shipped shim is already in the expected location:
-
-```bash
-pi
-```
-
-After startup, open a UI session and run `/reload` to execute the checklist scenarios below.
-
 ### Install as a Pi package
 
 The package entrypoint is located at `extensions/inline-slash.ts`, and `package.json` declares the `pi.extensions` manifest. Local install:
@@ -54,19 +44,9 @@ The package entrypoint is located at `extensions/inline-slash.ts`, and `package.
 pi install /absolute/path/to/pi-inline-slash-extension
 ```
 
-Or project-local through `.pi/settings.json`:
-
-```json
-{
-  "packages": [
-    "/absolute/path/to/pi-inline-slash-extension"
-  ]
-}
-```
-
 ### Global setup by absolute path
 
-If you need a direct path without `pi install`, the extension can stay in the global Pi settings file:
+If you need a direct path without `pi install`, the extension can stay in the global Pi settings file or be exposed through your global extension directory setup:
 
 ```json
 ~/.pi/agent/settings.json
@@ -84,7 +64,7 @@ Minimal example:
 
 ### What counts as successful wiring
 
-- the agent starts without an import error from `extensions/inline-slash.ts` or `.pi/extensions/inline-slash.ts`;
+- the agent starts without an import error from `extensions/inline-slash.ts`;
 - in a UI session after `/reload`, the scenario `text /gs` -> `/gsd` autocomplete works;
 - submit for `'/home/spike/file.ts'` no longer goes to `Unknown command` and instead stays a normal user message.
 
@@ -94,7 +74,6 @@ Minimal example:
 | File | Runtime role | What matters for a truth-first description |
 | --- | --- | --- |
 | `extensions/inline-slash.ts` | package entrypoint | installable entrypoint for a Pi package and global wiring |
-| `.pi/extensions/inline-slash.ts` | project-local shim | project-local auto-discovery seam; only re-exports the package entrypoint |
 | `src/inline-slash/command-catalog.ts` | public catalog builder | accepts only public commands from `pi.getCommands()` with source `extension`, `prompt`, `skill`; uses `sourceInfo` as the canonical provenance contract |
 | `src/inline-slash/editor.ts` | editor wrapper | wraps `onSubmit`, forwards the delegate autocomplete provider, and refreshes inline slash suggestions after normal `handleInput` |
 | `src/inline-slash/provider.ts` | autocomplete provider | delegates start-of-message slash to the core provider; builds mid-line and second-line slash suggestions from the local catalog |
@@ -133,7 +112,7 @@ Automated checks cover three layers:
 - `tests/inline-slash/editor-smoke.test.ts`
   - the normal typing cycle really refreshes autocomplete on the second line and mid-line;
   - the submit strategy calls `sendUserMessage` only for a leading absolute path;
-  - smoke tests import both `extensions/inline-slash.ts` and `.pi/extensions/inline-slash.ts`, then verify wiring through `setEditorComponent`.
+  - smoke tests import `extensions/inline-slash.ts` and verify wiring through `setEditorComponent`.
 
 ### What is specifically proven
 

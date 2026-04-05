@@ -29,7 +29,7 @@ function createCatalog() {
       name: "gsd",
       source: "extension",
       description: "GSD helper",
-      sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+      sourceInfo: sourceInfo("project", "extensions/inline-slash.ts"),
     },
     {
       name: "daily",

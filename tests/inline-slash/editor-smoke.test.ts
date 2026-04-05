@@ -269,7 +269,7 @@ function createCatalog() {
       name: "gsd",
       source: "extension",
       description: "GSD helper",
-      sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+      sourceInfo: sourceInfo("project", "extensions/inline-slash.ts"),
     },
     {
       name: "skill:create-skill",
@@ -664,16 +664,9 @@ describe("inline slash extension entrypoint", () => {
   }
 
   test("package-entrypoint-loader: package entrypoint imports and wiring reaches setEditorComponent", async () => {
-    /** package-entrypoint-loader: the package entrypoint must be installable without the project-local shim. */
+    /** package-entrypoint-loader: the package entrypoint must stay installable as the only shipped runtime entrypoint. */
     const activate = await loadEntrypoint("extensions/inline-slash.ts");
 
     assertEntrypointWiring(activate, "extensions/inline-slash.ts");
-  });
-
-  test("project-shim-loader: the project-local shim re-exports the package entrypoint", async () => {
-    /** project-shim-loader: the .pi shim must remain compatible with project-scope auto-discovery. */
-    const activate = await loadEntrypoint(".pi/extensions/inline-slash.ts");
-
-    assertEntrypointWiring(activate, ".pi/extensions/inline-slash.ts");
   });
 });

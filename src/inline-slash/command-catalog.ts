@@ -1,7 +1,8 @@
+import type { SlashCommandInfo } from "@mariozechner/pi-coding-agent";
+
 import type {
   InlineSlashCatalog,
   InlineSlashCatalogEntry,
-  PublicSlashCommandInfo,
   PublicSlashCommandSource,
 } from "./types.js";
 
@@ -16,6 +17,26 @@ export const PUBLIC_COMMAND_CATALOG_NOTE =
  */
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+/**
+ * Проверка, что raw value соответствует реальному `SlashCommandInfo` из Pi.
+ */
+function isSlashCommandInfo(value: unknown): value is SlashCommandInfo {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const command = value as Partial<SlashCommandInfo>;
+
+  return isNonEmptyString(command.name)
+    && isNonEmptyString(command.source)
+    && !!command.sourceInfo
+    && typeof command.sourceInfo === "object"
+    && isNonEmptyString(command.sourceInfo.path)
+    && isNonEmptyString(command.sourceInfo.source)
+    && isNonEmptyString(command.sourceInfo.scope)
+    && isNonEmptyString(command.sourceInfo.origin);
 }
 
 /**
@@ -46,43 +67,33 @@ function buildMatchKeys(name: string, source: PublicSlashCommandSource): string[
  * Преобразование сырых данных `pi.getCommands()` в локальную запись каталога.
  */
 function toCatalogEntry(rawCommand: unknown): InlineSlashCatalogEntry | null {
-  if (!rawCommand || typeof rawCommand !== "object") {
+  if (!isSlashCommandInfo(rawCommand)) {
     return null;
   }
 
-  const command = rawCommand as Partial<PublicSlashCommandInfo>;
-
-  if (!isNonEmptyString(command.name)) {
+  if (!SUPPORTED_SOURCES.has(rawCommand.source)) {
     return null;
   }
 
-  if (!isNonEmptyString(command.source)) {
-    return null;
-  }
-
-  if (!SUPPORTED_SOURCES.has(command.source as PublicSlashCommandSource)) {
-    return null;
-  }
-
-  const source = command.source as PublicSlashCommandSource;
-  const name = normalizeCommandName(command.name);
+  const name = normalizeCommandName(rawCommand.name);
 
   if (name.length === 0 || /\s/.test(name)) {
     return null;
   }
 
-  const description = isNonEmptyString(command.description) ? command.description.trim() : undefined;
+  const description = isNonEmptyString(rawCommand.description)
+    ? rawCommand.description.trim()
+    : undefined;
 
   return {
     name,
     queryKey: name.toLowerCase(),
-    matchKeys: buildMatchKeys(name, source),
+    matchKeys: buildMatchKeys(name, rawCommand.source),
     label: `/${name}`,
     insertText: `/${name}`,
     description,
-    source,
-    location: command.location,
-    path: command.path,
+    source: rawCommand.source,
+    sourceInfo: rawCommand.sourceInfo,
   };
 }
 

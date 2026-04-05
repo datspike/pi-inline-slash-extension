@@ -13,8 +13,7 @@
   "include": [
     "src/**/*.ts",
     "tests/**/*.ts",
-    ".gsd/extensions/**/*.ts",
-    "types/**/*.d.ts",
+    ".pi/extensions/**/*.ts",
     "vitest.config.ts"
   ]
 }

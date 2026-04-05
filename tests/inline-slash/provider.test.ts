@@ -6,19 +6,49 @@ import type {
   AutocompleteApplyResult,
   AutocompleteItemLike,
   AutocompleteProviderLike,
+  AutocompleteRequestOptions,
   AutocompleteSuggestions,
   SlashTokenAnalysis,
 } from "../../src/inline-slash/types.js";
+
+function sourceInfo(scope: "user" | "project" | "temporary", path: string) {
+  return {
+    path,
+    source: "top-level",
+    scope,
+    origin: "top-level",
+  } as const;
+}
 
 /**
  * Создание локального каталога для provider tests.
  */
 function createCatalog() {
   return buildCommandCatalog([
-    { name: "gsd", source: "extension", description: "GSD helper" },
-    { name: "daily", source: "prompt", description: "Daily prompt" },
-    { name: "skill:create-skill", source: "skill", description: "Create skill" },
-    { name: "skill:commit-list", source: "skill", description: "Create commit plan" },
+    {
+      name: "gsd",
+      source: "extension",
+      description: "GSD helper",
+      sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+    },
+    {
+      name: "daily",
+      source: "prompt",
+      description: "Daily prompt",
+      sourceInfo: sourceInfo("user", "/home/spike/.pi/prompts/daily.md"),
+    },
+    {
+      name: "skill:create-skill",
+      source: "skill",
+      description: "Create skill",
+      sourceInfo: sourceInfo("project", ".pi/skills/create-skill/SKILL.md"),
+    },
+    {
+      name: "skill:commit-list",
+      source: "skill",
+      description: "Create commit plan",
+      sourceInfo: sourceInfo("project", ".pi/skills/commit-list/SKILL.md"),
+    },
   ]);
 }
 
@@ -29,7 +59,14 @@ function createDelegate(result?: AutocompleteSuggestions | null): AutocompletePr
   getSuggestionsSpy: ReturnType<typeof vi.fn>;
   applyCompletionSpy: ReturnType<typeof vi.fn>;
 } {
-  const getSuggestionsSpy = vi.fn(() => result ?? null);
+  const getSuggestionsSpy = vi.fn(
+    (
+      _lines: string[],
+      _cursorLine: number,
+      _cursorCol: number,
+      _options?: AutocompleteRequestOptions,
+    ) => result ?? null,
+  );
   const applyCompletionSpy = vi.fn(
     (
       lines: string[],
@@ -143,7 +180,21 @@ describe("InlineSlashProvider.getSuggestions", () => {
     const provider = new InlineSlashProvider({ catalog: createCatalog(), delegate });
 
     expect(provider.getSuggestions(["/se"], 0, 3)).toEqual(delegateResult);
-    expect(delegate.getSuggestionsSpy).toHaveBeenCalledWith(["/se"], 0, 3);
+    expect(delegate.getSuggestionsSpy).toHaveBeenCalledWith(["/se"], 0, 3, {});
+  });
+
+  test("start-of-line-delegate-options: прокидывает options в core provider", () => {
+    /** start-of-line-delegate-options: upstream provider должен получать force/signal без потерь. */
+    const delegateResult = {
+      items: [{ value: "settings", label: "settings", description: "Open settings" }],
+      prefix: "/se",
+    };
+    const delegate = createDelegate(delegateResult);
+    const provider = new InlineSlashProvider({ catalog: createCatalog(), delegate });
+    const options: AutocompleteRequestOptions = { force: true };
+
+    expect(provider.getSuggestions(["/se"], 0, 3, options)).toEqual(delegateResult);
+    expect(delegate.getSuggestionsSpy).toHaveBeenCalledWith(["/se"], 0, 3, options);
   });
 
   test("missing-delegate-start-of-line: возвращает null, если делегировать некуда", () => {

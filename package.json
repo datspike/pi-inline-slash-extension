@@ -10,6 +10,7 @@
     "verify:s03": "bash scripts/verify-s03.sh"
   },
   "devDependencies": {
+    "@mariozechner/pi-coding-agent": "^0.65.0",
     "@types/node": "^24.8.1",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"

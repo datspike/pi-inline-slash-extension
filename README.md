@@ -1,6 +1,6 @@
 # pi-inline-slash-extension
 
-Shipped extension для Pi / GSD, который добавляет inline slash autocomplete внутри текста и bypass для leading absolute paths без форка core.
+Shipped extension для Pi, который добавляет inline slash autocomplete внутри текста и bypass для leading absolute paths без форка core.
 
 <!-- verifier:readme/shipped-scope -->
 ## Что реально shipped
@@ -13,63 +13,30 @@ Shipped extension для Pi / GSD, который добавляет inline slas
 <!-- verifier:readme/architecture -->
 ## Архитектура
 
-Расширение подключается через `.gsd/extensions/inline-slash.ts` и активируется на `session_start` только при `ctx.hasUI`. Entry point:
+Расширение подключается через `.pi/extensions/inline-slash.ts` и активируется на `session_start` только при `ctx.hasUI`. Entry point:
 
 1. строит public inline catalog через `buildCommandCatalog(api.getCommands())`;
 2. создаёт editor wrapper поверх `CustomEditor` через `createInlineSlashEditorClass(...)`;
 3. подключает submit strategy через `createInlineSlashSubmitStrategy(api)`;
 4. регистрирует новый editor через `ctx.ui.setEditorComponent(...)`.
 
-Core не патчится: extension расширяет editor/runtime seams поверх публичного API и оставляет штатный first-line slash path в делегированном режиме.
+Core не патчится: extension расширяет editor/runtime seam поверх публичного API и оставляет штатный first-line slash path в делегированном режиме.
 
-## Как подключить расширение к агенту
+## Как подключить расширение к Pi
 
-### Разовый запуск из checkout этого репозитория
+### Project-local подключение
 
-Если хотите проверить поведение без копирования файлов, запустите агент с явным путём к entrypoint:
+Pi auto-discovery ищет project-local extensions в `.pi/extensions/`. В этом репозитории shipped entrypoint уже лежит по нужному пути:
 
 ```bash
-gsd --extension "$PWD/.gsd/extensions/inline-slash.ts"
+pi
 ```
 
 После старта откройте UI-сессию и выполните `/reload`, чтобы прогнать сценарии из checklist ниже.
 
-### Постоянное project-local подключение
+### Глобальное подключение
 
-Pi auto-discovery ищет project-local extensions в `.pi/extensions/`, а не в `.gsd/extensions/`. Для постоянного подключения в этом репозитории удобнее сделать shim или symlink на shipped entrypoint:
-
-```bash
-mkdir -p .pi/extensions
-ln -sf ../../.gsd/extensions/inline-slash.ts .pi/extensions/inline-slash.ts
-```
-
-После этого агент можно запускать обычной командой `gsd`. Если Pi напишет, что project-local extensions пропущены из-за trust gate, сначала доверьте проект, затем перезапустите сессию и выполните `/reload`.
-
-### Подключение через глобальные настройки
-
-Если хотите подключать extension во всех сессиях без `--extension`, добавьте абсолютный путь к entrypoint в глобальный settings файл агента.
-
-#### Для GSD
-
-Глобальный файл настроек:
-
-```json
-~/.gsd/agent/settings.json
-```
-
-Минимальный пример:
-
-```json
-{
-  "extensions": [
-    "/absolute/path/to/pi-inline-slash-extension/.gsd/extensions/inline-slash.ts"
-  ]
-}
-```
-
-#### Для базового Pi
-
-Если вы запускаете не `gsd`, а базовый `pi`, тот же механизм живёт в другом config dir:
+Если хотите подключать extension во всех сессиях без локального копирования, добавьте абсолютный путь к entrypoint в глобальный settings файл Pi:
 
 ```json
 ~/.pi/agent/settings.json
@@ -80,7 +47,7 @@ ln -sf ../../.gsd/extensions/inline-slash.ts .pi/extensions/inline-slash.ts
 ```json
 {
   "extensions": [
-    "/absolute/path/to/pi-inline-slash-extension/.gsd/extensions/inline-slash.ts"
+    "/absolute/path/to/pi-inline-slash-extension/.pi/extensions/inline-slash.ts"
   ]
 }
 ```
@@ -93,7 +60,7 @@ ln -sf ../../.gsd/extensions/inline-slash.ts .pi/extensions/inline-slash.ts
 
 ### Что считать успешным подключением
 
-- агент стартует без ошибки импорта `.gsd/extensions/inline-slash.ts`;
+- агент стартует без ошибки импорта `.pi/extensions/inline-slash.ts`;
 - в UI-сессии после `/reload` работает сценарий `текст /gs` -> появляется `/gsd` autocomplete;
 - submit `'/home/spike/file.ts'` больше не идёт в `Unknown command`, а остаётся обычным user message.
 
@@ -102,13 +69,13 @@ ln -sf ../../.gsd/extensions/inline-slash.ts .pi/extensions/inline-slash.ts
 
 | Файл | Роль в runtime | Что важно для truth-first описания |
 | --- | --- | --- |
-| `.gsd/extensions/inline-slash.ts` | wiring entrypoint | собирает каталог из `api.getCommands()` и ставит editor wrapper только в UI-сессии |
-| `src/inline-slash/command-catalog.ts` | public catalog builder | принимает только public команды из `pi.getCommands()` с source `extension`, `prompt`, `skill`; не притворяется полным built-in catalog |
+| `.pi/extensions/inline-slash.ts` | wiring entrypoint | собирает каталог из `api.getCommands()` и ставит editor wrapper только в UI-сессии |
+| `src/inline-slash/command-catalog.ts` | public catalog builder | принимает только public команды из `pi.getCommands()` с source `extension`, `prompt`, `skill`; использует `sourceInfo` как канонический provenance contract |
 | `src/inline-slash/editor.ts` | editor wrapper | оборачивает `onSubmit`, прокидывает delegate autocomplete provider и после обычного `handleInput` обновляет inline slash suggestions |
 | `src/inline-slash/provider.ts` | autocomplete provider | делегирует start-of-message slash в core provider; mid-line и second-line slash строит из локального каталога |
 | `src/inline-slash/classifier.ts` | token classifier | различает command, `skill:*` и absolute-path candidate по текущему токену вокруг курсора |
 | `src/inline-slash/submit-routing.ts` | pure submit boundary | после `trim()` смотрит только на leading token и решает `delegate-core-submit` vs `send-user-message` |
-| `src/inline-slash/extension-submit-strategy.ts` | runtime submit shim | для absolute path добавляет запись в history и вызывает `sendUserMessage`; всё остальное отдаёт в core submit |
+| `src/inline-slash/editor.ts` | runtime submit shim | `createInlineSlashSubmitStrategy` для absolute path добавляет запись в history и вызывает `sendUserMessage`; всё остальное отдаёт в core submit |
 
 <!-- verifier:readme/verified-scenarios -->
 ## Verified scenarios
@@ -129,7 +96,7 @@ ln -sf ../../.gsd/extensions/inline-slash.ts .pi/extensions/inline-slash.ts
 - `tests/inline-slash/editor-smoke.test.ts`
   - обычный typing cycle реально обновляет autocomplete на второй строке и mid-line;
   - submit strategy вызывает `sendUserMessage` только для leading absolute path;
-  - loader-faithful smoke test импортирует `.gsd/extensions/inline-slash.ts` и проверяет wiring до `setEditorComponent`.
+  - Pi-native smoke test импортирует `.pi/extensions/inline-slash.ts` и проверяет wiring до `setEditorComponent`.
 
 ### Что именно считается доказанным
 
@@ -185,6 +152,7 @@ Automated proof и live runtime proof намеренно разделены: к�
 
 - inline catalog строится только из public `pi.getCommands()`; extension не синтезирует и не обещает полный built-in slash catalog;
 - локальный каталог принимает только public sources `extension`, `prompt`, `skill`;
+- `sourceInfo` используется как единственный канонический provenance contract;
 - first-line start-of-message slash autocomplete остаётся delegated core behavior, а не локальной заменой core provider;
 - submit bypass смотрит только на leading token после `trim()`: абсолютный путь в начале сообщения bypass'ится, остальные случаи идут в `delegate-core-submit`;
 - `/unknown` намеренно остаётся delegated core unknown-command handling;

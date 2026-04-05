@@ -1,3 +1,5 @@
+import type { SlashCommandInfo, SourceInfo } from "@mariozechner/pi-coding-agent";
+
 export type SlashCandidateKind = "command" | "skill" | "absolute-path";
 
 export type SlashNoMatchReason =
@@ -71,6 +73,11 @@ export interface AutocompleteSuggestions {
   prefix: string;
 }
 
+export interface AutocompleteRequestOptions {
+  force?: boolean;
+  signal?: AbortSignal;
+}
+
 export interface AutocompleteApplyResult {
   lines: string[];
   cursorLine: number;
@@ -82,6 +89,7 @@ export interface AutocompleteProviderLike {
     lines: string[],
     cursorLine: number,
     cursorCol: number,
+    options?: AutocompleteRequestOptions,
   ): AutocompleteSuggestions | null;
   applyCompletion(
     lines: string[],
@@ -92,17 +100,8 @@ export interface AutocompleteProviderLike {
   ): AutocompleteApplyResult;
 }
 
-export type PublicSlashCommandSource = "extension" | "prompt" | "skill";
-
-export type PublicSlashCommandLocation = "user" | "project" | "path";
-
-export interface PublicSlashCommandInfo {
-  name: string;
-  description?: string;
-  source: PublicSlashCommandSource;
-  location?: PublicSlashCommandLocation;
-  path?: string;
-}
+export type PublicSlashCommandSource = SlashCommandInfo["source"];
+export type PublicSlashCommandSourceInfo = SourceInfo;
 
 export interface InlineSlashCatalogEntry {
   name: string;
@@ -112,8 +111,7 @@ export interface InlineSlashCatalogEntry {
   insertText: string;
   description?: string;
   source: PublicSlashCommandSource;
-  location?: PublicSlashCommandLocation;
-  path?: string;
+  sourceInfo: PublicSlashCommandSourceInfo;
 }
 
 export interface InlineSlashCatalog {

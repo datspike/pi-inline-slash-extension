@@ -2,18 +2,36 @@ import { describe, expect, test } from "vitest";
 
 import { PUBLIC_COMMAND_CATALOG_NOTE, buildCommandCatalog } from "../../src/inline-slash/command-catalog.js";
 
+function sourceInfo(scope: "user" | "project" | "temporary", path: string) {
+  return {
+    path,
+    source: "top-level",
+    scope,
+    origin: "top-level",
+  } as const;
+}
+
 describe("buildCommandCatalog", () => {
   test("public-contract: включает только extension/prompt/skill из public API и не притворяется built-in catalog", () => {
     /** public-contract: built-ins вне `pi.getCommands()` должны быть явно вне scope. */
     const catalog = buildCommandCatalog([
-      { name: "gsd", source: "extension", description: "GSD helper" },
-      { name: "daily", source: "prompt", description: "Daily prompt" },
+      {
+        name: "gsd",
+        source: "extension",
+        description: "GSD helper",
+        sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+      },
+      {
+        name: "daily",
+        source: "prompt",
+        description: "Daily prompt",
+        sourceInfo: sourceInfo("user", "/home/spike/.pi/prompts/daily.md"),
+      },
       {
         name: "skill:create-skill",
         source: "skill",
         description: "Create skill",
-        location: "project",
-        path: ".gsd/skills/create-skill/SKILL.md",
+        sourceInfo: sourceInfo("project", ".pi/skills/create-skill/SKILL.md"),
       },
     ]);
 
@@ -29,8 +47,7 @@ describe("buildCommandCatalog", () => {
           insertText: "/daily",
           description: "Daily prompt",
           source: "prompt",
-          location: undefined,
-          path: undefined,
+          sourceInfo: sourceInfo("user", "/home/spike/.pi/prompts/daily.md"),
         },
         {
           name: "gsd",
@@ -40,8 +57,7 @@ describe("buildCommandCatalog", () => {
           insertText: "/gsd",
           description: "GSD helper",
           source: "extension",
-          location: undefined,
-          path: undefined,
+          sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
         },
         {
           name: "skill:create-skill",
@@ -51,8 +67,7 @@ describe("buildCommandCatalog", () => {
           insertText: "/skill:create-skill",
           description: "Create skill",
           source: "skill",
-          location: "project",
-          path: ".gsd/skills/create-skill/SKILL.md",
+          sourceInfo: sourceInfo("project", ".pi/skills/create-skill/SKILL.md"),
         },
       ],
     });
@@ -61,12 +76,23 @@ describe("buildCommandCatalog", () => {
   test("malformed-inputs: игнорирует записи без имени, с unsupported source и duplicate alias", () => {
     /** malformed-inputs: невалидные записи не должны ломать локальный каталог. */
     const catalog = buildCommandCatalog([
-      { name: "gsd", source: "extension", description: "Первая запись" },
-      { name: "/gsd", source: "extension", description: "Дубликат через slash" },
-      { name: "", source: "skill", description: "Пустое имя" },
-      { source: "prompt", description: "Без имени" },
-      { name: "broken", source: "builtin", description: "Unsupported source" },
-      { name: "two words", source: "prompt", description: "Имя с пробелом" },
+      {
+        name: "gsd",
+        source: "extension",
+        description: "Первая запись",
+        sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+      },
+      {
+        name: "/gsd",
+        source: "extension",
+        description: "Дубликат через slash",
+        sourceInfo: sourceInfo("project", ".pi/extensions/duplicate.ts"),
+      },
+      { name: "", source: "skill", description: "Пустое имя", sourceInfo: sourceInfo("project", ".pi/skills/empty/SKILL.md") },
+      { source: "prompt", description: "Без имени", sourceInfo: sourceInfo("user", "/home/spike/.pi/prompts/unnamed.md") },
+      { name: "broken", source: "builtin", description: "Unsupported source", sourceInfo: sourceInfo("temporary", "<builtin:broken>") },
+      { name: "two words", source: "prompt", description: "Имя с пробелом", sourceInfo: sourceInfo("user", "/home/spike/.pi/prompts/two-words.md") },
+      { name: "missing-source-info", source: "extension", description: "Нет sourceInfo" },
       null,
       undefined,
     ]);
@@ -80,8 +106,7 @@ describe("buildCommandCatalog", () => {
         insertText: "/gsd",
         description: "Первая запись",
         source: "extension",
-        location: undefined,
-        path: undefined,
+        sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
       },
     ]);
   });
@@ -89,7 +114,12 @@ describe("buildCommandCatalog", () => {
   test("skill-short-alias: добавляет plain alias для skill:* без смены canonical insertText", () => {
     /** skill-short-alias: short alias нужен только для поиска, а не для смены submit form. */
     const catalog = buildCommandCatalog([
-      { name: "skill:commit-list", source: "skill", description: "Commit planner" },
+      {
+        name: "skill:commit-list",
+        source: "skill",
+        description: "Commit planner",
+        sourceInfo: sourceInfo("project", ".pi/skills/commit-list/SKILL.md"),
+      },
     ]);
 
     expect(catalog.entries).toEqual([
@@ -101,8 +131,7 @@ describe("buildCommandCatalog", () => {
         insertText: "/skill:commit-list",
         description: "Commit planner",
         source: "skill",
-        location: undefined,
-        path: undefined,
+        sourceInfo: sourceInfo("project", ".pi/skills/commit-list/SKILL.md"),
       },
     ]);
   });

@@ -1,21 +1,30 @@
-import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { describe, expect, test, vi } from "vitest";
 
-import { createInlineSlashSubmitStrategy } from "../../src/inline-slash/extension-submit-strategy.js";
 import { buildCommandCatalog } from "../../src/inline-slash/command-catalog.js";
 import {
   createInlineSlashEditorClass,
+  createInlineSlashSubmitStrategy,
   type InlineSlashSubmitStrategy,
 } from "../../src/inline-slash/editor.js";
 import type {
   AutocompleteApplyResult,
   AutocompleteItemLike,
   AutocompleteProviderLike,
+  AutocompleteRequestOptions,
   AutocompleteSuggestions,
 } from "../../src/inline-slash/types.js";
+
+function sourceInfo(scope: "user" | "project" | "temporary", resourcePath: string) {
+  return {
+    path: resourcePath,
+    source: "top-level",
+    scope,
+    origin: "top-level",
+  } as const;
+}
 
 /**
  * Минимальный autocomplete и submit harness, который имитирует core editor cycle.
@@ -256,9 +265,24 @@ class FakeCustomEditor {
  */
 function createCatalog() {
   return buildCommandCatalog([
-    { name: "gsd", source: "extension", description: "GSD helper" },
-    { name: "skill:create-skill", source: "skill", description: "Create skill" },
-    { name: "skill:commit-list", source: "skill", description: "Create commit plan" },
+    {
+      name: "gsd",
+      source: "extension",
+      description: "GSD helper",
+      sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+    },
+    {
+      name: "skill:create-skill",
+      source: "skill",
+      description: "Create skill",
+      sourceInfo: sourceInfo("project", ".pi/skills/create-skill/SKILL.md"),
+    },
+    {
+      name: "skill:commit-list",
+      source: "skill",
+      description: "Create commit plan",
+      sourceInfo: sourceInfo("project", ".pi/skills/commit-list/SKILL.md"),
+    },
   ]);
 }
 
@@ -271,7 +295,14 @@ function createDelegate(
   getSuggestionsSpy: ReturnType<typeof vi.fn>;
   applyCompletionSpy: ReturnType<typeof vi.fn>;
 } {
-  const getSuggestionsSpy = vi.fn(() => result);
+  const getSuggestionsSpy = vi.fn(
+    (
+      _lines: string[],
+      _cursorLine: number,
+      _cursorCol: number,
+      _options?: AutocompleteRequestOptions,
+    ) => result,
+  );
   const applyCompletionSpy = vi.fn(
     (
       lines: string[],
@@ -341,25 +372,6 @@ function createSubmitHarness(options?: {
   editor.onSubmit = coreOnSubmit;
 
   return { editor, coreOnSubmit, sendUserMessage };
-}
-
-/**
- * Резолв глобального gsd-pi loader для importExtensionModule smoke test.
- */
-function getPiCodingAgentIndexUrl(): string {
-  const globalNodeModules = execFileSync("npm", ["root", "-g"], {
-    encoding: "utf8",
-  }).trim();
-  const modulePath = path.join(
-    globalNodeModules,
-    "gsd-pi",
-    "packages",
-    "pi-coding-agent",
-    "dist",
-    "index.js",
-  );
-
-  return pathToFileURL(modulePath).href;
 }
 
 describe("InlineSlashEditor smoke collaboration", () => {
@@ -440,7 +452,7 @@ describe("InlineSlashEditor smoke collaboration", () => {
     editor.handleInput("g");
 
     expect(editor.lastSuggestions).toEqual(delegateResult);
-    expect(delegate.getSuggestionsSpy).toHaveBeenLastCalledWith(["/g"], 0, 2);
+    expect(delegate.getSuggestionsSpy).toHaveBeenLastCalledWith(["/g"], 0, 2, {});
   });
 
   test("missing-provider-injection: без setAutocompleteProvider текст не повреждается", () => {
@@ -568,11 +580,10 @@ describe("InlineSlashEditor submit routing smoke", () => {
 });
 
 describe("inline slash extension entrypoint", () => {
-  test("entrypoint-loader: loader импортирует ts entrypoint и wiring доходит до setEditorComponent", async () => {
+  test("entrypoint-loader: Pi-native entrypoint импортируется и wiring доходит до setEditorComponent", async () => {
     /** entrypoint-loader: smoke proof должен падать на broken entrypoint, а не молча обходить его. */
-    const { importExtensionModule } = await import(getPiCodingAgentIndexUrl());
-    const extensionPath = path.resolve(process.cwd(), ".gsd/extensions/inline-slash.ts");
-    const loaded = await importExtensionModule(import.meta.url, extensionPath) as {
+    const extensionPath = path.resolve(process.cwd(), ".pi/extensions/inline-slash.ts");
+    const loaded = await import(pathToFileURL(extensionPath).href) as {
       default?: (
         api: {
           on(event: string, handler: (event: unknown, ctx: any) => void): void;
@@ -602,8 +613,18 @@ describe("inline slash extension entrypoint", () => {
       },
       getCommands() {
         return [
-          { name: "gsd", source: "extension", description: "GSD helper" },
-          { name: "skill:create-skill", source: "skill", description: "Create skill" },
+          {
+            name: "gsd",
+            source: "extension",
+            description: "GSD helper",
+            sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+          },
+          {
+            name: "skill:create-skill",
+            source: "skill",
+            description: "Create skill",
+            sourceInfo: sourceInfo("project", ".pi/skills/create-skill/SKILL.md"),
+          },
         ];
       },
       sendUserMessage() {},

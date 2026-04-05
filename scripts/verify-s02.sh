@@ -3,9 +3,8 @@ set -euo pipefail
 
 readonly VERIFY_LABEL="verify:s02"
 readonly REQUIRED_FILES=(
-  ".gsd/extensions/inline-slash.ts"
+  ".pi/extensions/inline-slash.ts"
   "src/inline-slash/editor.ts"
-  "src/inline-slash/extension-submit-strategy.ts"
   "tests/inline-slash/editor-smoke.test.ts"
   "tests/inline-slash/submit-routing.test.ts"
   "scripts/verify-s02.sh"

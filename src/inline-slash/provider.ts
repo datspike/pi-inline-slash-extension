@@ -3,6 +3,7 @@ import type {
   AutocompleteApplyResult,
   AutocompleteItemLike,
   AutocompleteProviderLike,
+  AutocompleteRequestOptions,
   AutocompleteSuggestions,
   InlineSlashCatalog,
   SlashTokenAnalysis,
@@ -141,9 +142,14 @@ export class InlineSlashProvider implements AutocompleteProviderLike {
   /**
    * Построение suggestions для inline slash-токена или делегирование core provider.
    */
-  getSuggestions(lines: string[], cursorLine: number, cursorCol: number): AutocompleteSuggestions | null {
+  getSuggestions(
+    lines: string[],
+    cursorLine: number,
+    cursorCol: number,
+    options: AutocompleteRequestOptions = {},
+  ): AutocompleteSuggestions | null {
     if (isDelegatedStartOfMessage(lines, cursorLine, cursorCol)) {
-      return this.delegate?.getSuggestions(lines, cursorLine, cursorCol) ?? null;
+      return this.delegate?.getSuggestions(lines, cursorLine, cursorCol, options) ?? null;
     }
 
     const offset = cursorToOffset(lines, cursorLine, cursorCol);

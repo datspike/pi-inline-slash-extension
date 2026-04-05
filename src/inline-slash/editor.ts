@@ -1,4 +1,5 @@
 import { InlineSlashProvider } from "./provider.js";
+import { resolveSubmitRouting } from "./submit-routing.js";
 import type { AutocompleteProviderLike, InlineSlashCatalog } from "./types.js";
 
 export interface InlineSlashEditorOptions {
@@ -23,7 +24,7 @@ export interface InlineSlashEditorBase {
   getLines?(): string[];
   getCursor?(): EditorCursorPosition;
   handleInput(data: string): void;
-  setAutocompleteProvider(provider: AutocompleteProviderLike): void;
+  setAutocompleteProvider(provider: unknown): void;
   addToHistory?(text: string): void;
   onSubmit?: (text: string) => void;
   onChange?: (text: string) => void;
@@ -39,6 +40,10 @@ export type InlineSlashSubmitStrategy = (
   context: InlineSlashSubmitStrategyContext,
 ) => void;
 
+export interface InlineSlashSubmitTransport {
+  sendUserMessage?: (text: string) => void;
+}
+
 interface InlineSlashEditorInternals {
   state?: {
     lines?: string[];
@@ -53,6 +58,29 @@ interface InlineSlashEditorInternals {
 }
 
 type InlineSlashEditorConstructor = new (...args: any[]) => InlineSlashEditorBase;
+
+/**
+ * Runtime submit strategy для absolute path bypass без изменения core slash поведения.
+ */
+export function createInlineSlashSubmitStrategy(
+  transport: InlineSlashSubmitTransport,
+): InlineSlashSubmitStrategy {
+  return ({ text, editor, delegateCoreSubmit }) => {
+    const routing = resolveSubmitRouting(text);
+
+    if (routing.route !== "send-user-message") {
+      delegateCoreSubmit(routing.preparedText);
+      return;
+    }
+
+    if (typeof transport.sendUserMessage !== "function") {
+      throw new Error("Inline slash extension requires api.sendUserMessage for absolute path submit bypass.");
+    }
+
+    editor.addToHistory?.(routing.preparedText);
+    transport.sendUserMessage(routing.preparedText);
+  };
+}
 
 /**
  * Установка submit shim поверх instance property, потому что base Editor держит own field `onSubmit`.

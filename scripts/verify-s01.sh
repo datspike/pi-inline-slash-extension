@@ -3,7 +3,7 @@ set -euo pipefail
 
 readonly VERIFY_LABEL="verify:s01"
 readonly REQUIRED_FILES=(
-  ".gsd/extensions/inline-slash.ts"
+  ".pi/extensions/inline-slash.ts"
   "src/inline-slash/editor.ts"
   "tests/inline-slash/editor-smoke.test.ts"
   "tests/inline-slash/provider.test.ts"

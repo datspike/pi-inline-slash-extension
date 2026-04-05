@@ -7,12 +7,13 @@ readonly SUBMIT_BOUNDARY_LABEL="verify:s02"
 readonly REQUIRED_FILES=(
   "README.md"
   "package.json"
+  "extensions/inline-slash.ts"
   ".pi/extensions/inline-slash.ts"
+  "docs/UPSTREAM-SEAMS.md"
   "src/inline-slash/classifier.ts"
   "src/inline-slash/command-catalog.ts"
   "src/inline-slash/editor.ts"
   "src/inline-slash/provider.ts"
-  "src/inline-slash/submit-routing.ts"
   "tests/inline-slash/editor-smoke.test.ts"
   "tests/inline-slash/provider.test.ts"
   "tests/inline-slash/submit-routing.test.ts"
@@ -78,10 +79,11 @@ require_fixed_pattern "<!-- verifier:readme/manual-reload-checklist -->" "marker
 require_fixed_pattern "<!-- verifier:readme/proven-limitations -->" "marker proven-limitations"
 require_fixed_pattern "<!-- verifier:readme/upstream-patch-plan -->" "marker upstream-patch-plan"
 
-require_fixed_pattern '`.pi/extensions/inline-slash.ts`' "entrypoint seam"
+require_fixed_pattern '`.pi/extensions/inline-slash.ts`' "project shim seam"
+require_fixed_pattern '`extensions/inline-slash.ts`' "package entrypoint seam"
 require_fixed_pattern '`src/inline-slash/editor.ts`' "editor seam"
 require_fixed_pattern '`src/inline-slash/command-catalog.ts`' "command catalog seam"
-require_fixed_pattern '`src/inline-slash/submit-routing.ts`' "submit routing seam"
+require_fixed_pattern '`src/inline-slash/classifier.ts`' "submit routing seam"
 require_fixed_pattern '`createInlineSlashSubmitStrategy`' "submit strategy seam"
 require_fixed_pattern '`pi.getCommands()`' "public catalog boundary"
 require_fixed_pattern '`sourceInfo`' "public provenance boundary"
@@ -111,7 +113,7 @@ echo "[s03] inline autocomplete proof -> npm run ${INLINE_AUTOCOMPLETE_LABEL}"
 npm run "$INLINE_AUTOCOMPLETE_LABEL"
 
 echo
-echo "[s03] submit-routing proof -> npm run ${SUBMIT_BOUNDARY_LABEL}"
+echo "[s03] submit-boundary proof -> npm run ${SUBMIT_BOUNDARY_LABEL}"
 npm run "$SUBMIT_BOUNDARY_LABEL"
 
 echo

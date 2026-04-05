@@ -1,13 +1,21 @@
 {
   "name": "pi-inline-slash-extension",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
   "type": "module",
+  "keywords": ["pi-package"],
+  "pi": {
+    "extensions": ["./extensions/inline-slash.ts"]
+  },
   "scripts": {
     "test": "vitest",
     "verify:s01": "vitest --run tests/inline-slash/classifier.test.ts tests/inline-slash/command-catalog.test.ts tests/inline-slash/provider.test.ts tests/inline-slash/editor-smoke.test.ts",
     "verify:s02": "vitest --run tests/inline-slash/classifier.test.ts tests/inline-slash/submit-routing.test.ts tests/inline-slash/editor-smoke.test.ts && tsc --noEmit",
     "verify:s03": "bash scripts/verify-s03.sh"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-tui": "*"
   },
   "devDependencies": {
     "@mariozechner/pi-coding-agent": "^0.65.0",

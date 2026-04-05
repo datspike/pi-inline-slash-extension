@@ -4,16 +4,18 @@ import type {
   SlashNoMatch,
   SlashTokenAnalysis,
   SlashTokenBounds,
+  SubmitRoutingResult,
 } from "./types.js";
 
 const SKILL_TOKEN_PATTERN = /^\/skill:[a-z0-9._-]*$/i;
 const COMMAND_TOKEN_PATTERN = /^\/[a-z][a-z0-9-]*$/i;
+const WHITESPACE_PATTERN = /\s/;
 
 /**
  * Проверка, что символ является пробельным разделителем токенов.
  */
 function isWhitespaceCharacter(character: string): boolean {
-  return /\s/.test(character);
+  return WHITESPACE_PATTERN.test(character);
 }
 
 /**
@@ -40,8 +42,8 @@ function getProbeIndex(text: string, cursor: number): number | null {
     return null;
   }
 
-  if (isWhitespaceCharacter(text[cursor])) {
-    return cursor > 0 && !isWhitespaceCharacter(text[cursor - 1]) ? cursor - 1 : null;
+  if (isWhitespaceCharacter(text[cursor] ?? "")) {
+    return cursor > 0 && !isWhitespaceCharacter(text[cursor - 1] ?? "") ? cursor - 1 : null;
   }
 
   return cursor;
@@ -53,7 +55,7 @@ function getProbeIndex(text: string, cursor: number): number | null {
 function findTokenStart(text: string, probeIndex: number): number {
   let index = probeIndex;
 
-  while (index > 0 && !isWhitespaceCharacter(text[index - 1])) {
+  while (index > 0 && !isWhitespaceCharacter(text[index - 1] ?? "")) {
     index -= 1;
   }
 
@@ -66,7 +68,7 @@ function findTokenStart(text: string, probeIndex: number): number {
 function findTokenEnd(text: string, probeIndex: number): number {
   let index = probeIndex;
 
-  while (index < text.length && !isWhitespaceCharacter(text[index])) {
+  while (index < text.length && !isWhitespaceCharacter(text[index] ?? "")) {
     index += 1;
   }
 
@@ -168,4 +170,43 @@ export function analyzeSlashToken(text: string, cursor: number): SlashTokenAnaly
   }
 
   return createTokenResult(token, { start, end }, kind);
+}
+
+/**
+ * Нормализация submit-текста в том же виде, который дальше увидит core path.
+ */
+export function normalizeSubmitText(text: string): string {
+  return text.trim();
+}
+
+/**
+ * Чтение только ведущего токена после trim без обхода всего буфера.
+ */
+function getLeadingToken(text: string): string {
+  let end = 0;
+
+  while (end < text.length && !isWhitespaceCharacter(text[end] ?? "")) {
+    end += 1;
+  }
+
+  return text.slice(0, end);
+}
+
+/**
+ * Выбор submit route для path-vs-command boundary без runtime side effects.
+ */
+export function resolveSubmitRouting(text: string): SubmitRoutingResult {
+  const preparedText = normalizeSubmitText(text);
+  const leadingToken = getLeadingToken(preparedText);
+  const analysis = analyzeSlashToken(leadingToken, leadingToken.length);
+
+  return {
+    route:
+      analysis.status === "absolute-path-candidate"
+        ? "send-user-message"
+        : "delegate-core-submit",
+    preparedText,
+    leadingToken,
+    analysis,
+  };
 }

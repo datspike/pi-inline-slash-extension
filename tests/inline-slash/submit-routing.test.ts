@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { normalizeSubmitText, resolveSubmitRouting } from "../../src/inline-slash/submit-routing.js";
+import { normalizeSubmitText, resolveSubmitRouting } from "../../src/inline-slash/classifier.js";
 
 describe("normalizeSubmitText", () => {
   test("submit-trim-parity: повторяет core trim для submit boundary", () => {

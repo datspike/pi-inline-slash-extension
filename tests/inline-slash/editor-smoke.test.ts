@@ -580,9 +580,8 @@ describe("InlineSlashEditor submit routing smoke", () => {
 });
 
 describe("inline slash extension entrypoint", () => {
-  test("entrypoint-loader: Pi-native entrypoint импортируется и wiring доходит до setEditorComponent", async () => {
-    /** entrypoint-loader: smoke proof должен падать на broken entrypoint, а не молча обходить его. */
-    const extensionPath = path.resolve(process.cwd(), ".pi/extensions/inline-slash.ts");
+  async function loadEntrypoint(relativePath: string) {
+    const extensionPath = path.resolve(process.cwd(), relativePath);
     const loaded = await import(pathToFileURL(extensionPath).href) as {
       default?: (
         api: {
@@ -598,8 +597,20 @@ describe("inline slash extension entrypoint", () => {
         sendUserMessage(text: string): void;
       },
     ) => void);
-    const activate = typeof loaded === "function" ? loaded : loaded.default;
 
+    return typeof loaded === "function" ? loaded : loaded.default;
+  }
+
+  function assertEntrypointWiring(
+    activate: ((
+      api: {
+        on(event: string, handler: (event: unknown, ctx: any) => void): void;
+        getCommands(): unknown[];
+        sendUserMessage(text: string): void;
+      },
+    ) => void) | undefined,
+    extensionPath: string,
+  ) {
     const handlers = new Map<string, (event: unknown, ctx: any) => void>();
     let editorFactory:
       | ((tui: unknown, theme: unknown, keybindings: unknown) => { setAutocompleteProvider: unknown; handleInput: unknown; onSubmit: unknown })
@@ -617,7 +628,7 @@ describe("inline slash extension entrypoint", () => {
             name: "gsd",
             source: "extension",
             description: "GSD helper",
-            sourceInfo: sourceInfo("project", ".pi/extensions/inline-slash.ts"),
+            sourceInfo: sourceInfo("project", extensionPath),
           },
           {
             name: "skill:create-skill",
@@ -650,5 +661,19 @@ describe("inline slash extension entrypoint", () => {
     expect(editor?.setAutocompleteProvider).toBeTypeOf("function");
     expect(editor?.handleInput).toBeTypeOf("function");
     expect(editor?.onSubmit).toBeTypeOf("function");
+  }
+
+  test("package-entrypoint-loader: package entrypoint импортируется и wiring доходит до setEditorComponent", async () => {
+    /** package-entrypoint-loader: package entrypoint должен быть installable без project-local shim. */
+    const activate = await loadEntrypoint("extensions/inline-slash.ts");
+
+    assertEntrypointWiring(activate, "extensions/inline-slash.ts");
+  });
+
+  test("project-shim-loader: project-local shim реэкспортирует package entrypoint", async () => {
+    /** project-shim-loader: .pi shim должен оставаться совместимым с auto-discovery project scope. */
+    const activate = await loadEntrypoint(".pi/extensions/inline-slash.ts");
+
+    assertEntrypointWiring(activate, ".pi/extensions/inline-slash.ts");
   });
 });

@@ -82,7 +82,7 @@ function splitLines(text: string): string[] {
 /**
  * Проверка, что курсор находится в делегируемом core slash-сценарии.
  */
-function isDelegatedStartOfMessage(
+export function isDelegatedStartOfMessage(
   lines: readonly string[],
   cursorLine: number,
   cursorCol: number,

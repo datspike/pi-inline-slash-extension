@@ -1,5 +1,8 @@
-import { InlineSlashProvider } from "./provider.js";
-import { resolveSubmitRouting } from "./submit-routing.js";
+import { resolveSubmitRouting } from "./classifier.js";
+import {
+  InlineSlashProvider,
+  isDelegatedStartOfMessage,
+} from "./provider.js";
 import type { AutocompleteProviderLike, InlineSlashCatalog } from "./types.js";
 
 export interface InlineSlashEditorOptions {
@@ -27,7 +30,6 @@ export interface InlineSlashEditorBase {
   setAutocompleteProvider(provider: unknown): void;
   addToHistory?(text: string): void;
   onSubmit?: (text: string) => void;
-  onChange?: (text: string) => void;
 }
 
 export interface InlineSlashSubmitStrategyContext {
@@ -44,17 +46,10 @@ export interface InlineSlashSubmitTransport {
   sendUserMessage?: (text: string) => void;
 }
 
-interface InlineSlashEditorInternals {
-  state?: {
-    lines?: string[];
-    cursorLine?: number;
-    cursorCol?: number;
-  };
-  autocompletePrefix?: string;
-  tryTriggerAutocomplete?(explicitTab?: boolean): void;
-  updateAutocomplete?(): void;
-  cancelAutocomplete?(): void;
-  isShowingAutocomplete?(): boolean;
+interface InlineSlashAutocompleteHooks {
+  isShowingAutocomplete(): boolean;
+  tryTriggerAutocomplete(explicitTab?: boolean): void;
+  updateAutocomplete(): void;
 }
 
 type InlineSlashEditorConstructor = new (...args: any[]) => InlineSlashEditorBase;
@@ -116,44 +111,45 @@ function installSubmitStrategy(
 }
 
 /**
- * Снимок текущего текста и курсора из editor seam без зависимости от runtime Pi.
+ * Извлечение только минимального набора private autocomplete hooks.
  */
-export function readEditorSnapshot(editor: InlineSlashEditorBase): EditorSnapshot | null {
-  const text = editor.getText();
-  const lines =
-    typeof editor.getLines === "function"
-      ? editor.getLines()
-      : text.split("\n");
-  const cursor =
-    typeof editor.getCursor === "function"
-      ? editor.getCursor()
-      : null;
-
-  if (cursor) {
-    return {
-      text,
-      lines,
-      cursorLine: cursor.line,
-      cursorCol: cursor.col,
-    };
-  }
-
-  const internals = editor as InlineSlashEditorBase & InlineSlashEditorInternals;
-  const state = internals.state;
+function getInlineSlashAutocompleteHooks(
+  editor: InlineSlashEditorBase,
+): InlineSlashAutocompleteHooks | null {
+  const candidate = editor as Partial<InlineSlashAutocompleteHooks>;
 
   if (
-    !state
-    || typeof state.cursorLine !== "number"
-    || typeof state.cursorCol !== "number"
+    typeof candidate.isShowingAutocomplete !== "function"
+    || typeof candidate.tryTriggerAutocomplete !== "function"
+    || typeof candidate.updateAutocomplete !== "function"
   ) {
     return null;
   }
 
   return {
+    isShowingAutocomplete: candidate.isShowingAutocomplete.bind(editor),
+    tryTriggerAutocomplete: candidate.tryTriggerAutocomplete.bind(editor),
+    updateAutocomplete: candidate.updateAutocomplete.bind(editor),
+  };
+}
+
+/**
+ * Снимок текущего текста и курсора только через публичные editor methods.
+ */
+export function readEditorSnapshot(editor: InlineSlashEditorBase): EditorSnapshot | null {
+  if (typeof editor.getLines !== "function" || typeof editor.getCursor !== "function") {
+    return null;
+  }
+
+  const text = editor.getText();
+  const lines = editor.getLines();
+  const cursor = editor.getCursor();
+
+  return {
     text,
-    lines: Array.isArray(state.lines) ? [...state.lines] : lines,
-    cursorLine: state.cursorLine,
-    cursorCol: state.cursorCol,
+    lines,
+    cursorLine: cursor.line,
+    cursorCol: cursor.col,
   };
 }
 
@@ -176,31 +172,6 @@ export function didEditorSnapshotChange(
 }
 
 /**
- * Проверка delegated core-path для первой строки, который нельзя ломать inline logic.
- */
-export function isDelegatedStartOfMessage(
-  lines: readonly string[],
-  cursorLine: number,
-  cursorCol: number,
-): boolean {
-  if (cursorLine !== 0) {
-    return false;
-  }
-
-  const currentLine = lines[0] ?? "";
-  return currentLine.slice(0, cursorCol).startsWith("/");
-}
-
-/**
- * Проверка, что активное autocomplete относится к slash prefix и может быть отменено.
- */
-function hasSlashAutocompletePrefix(editor: InlineSlashEditorBase): boolean {
-  const internals = editor as InlineSlashEditorBase & InlineSlashEditorInternals;
-  return typeof internals.autocompletePrefix === "string"
-    && internals.autocompletePrefix.startsWith("/");
-}
-
-/**
  * Обновление autocomplete после обычного редактирования для inline и second-line slash.
  */
 export function refreshInlineSlashAutocomplete(
@@ -217,25 +188,25 @@ export function refreshInlineSlashAutocomplete(
     return;
   }
 
+  const hooks = getInlineSlashAutocompleteHooks(editor);
+
+  if (!hooks) {
+    return;
+  }
+
   const suggestions = provider.getSuggestions(
     snapshot.lines,
     snapshot.cursorLine,
     snapshot.cursorCol,
   );
-  const internals = editor as InlineSlashEditorBase & InlineSlashEditorInternals;
 
-  if (suggestions && suggestions.items.length > 0) {
-    if (internals.isShowingAutocomplete?.()) {
-      internals.updateAutocomplete?.();
-      return;
-    }
-
-    internals.tryTriggerAutocomplete?.();
+  if (hooks.isShowingAutocomplete()) {
+    hooks.updateAutocomplete();
     return;
   }
 
-  if (internals.isShowingAutocomplete?.() && hasSlashAutocompletePrefix(editor)) {
-    internals.cancelAutocomplete?.();
+  if (suggestions && suggestions.items.length > 0) {
+    hooks.tryTriggerAutocomplete();
   }
 }
 

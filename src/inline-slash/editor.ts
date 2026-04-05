@@ -3,7 +3,12 @@ import {
   InlineSlashProvider,
   isDelegatedStartOfMessage,
 } from "./provider.js";
-import type { AutocompleteProviderLike, AutocompleteSuggestions, InlineSlashCatalog } from "./types.js";
+import type {
+  AutocompleteProviderLike,
+  AutocompleteSuggestions,
+  InlineSlashCatalog,
+  SlashTokenAnalysis,
+} from "./types.js";
 
 export interface InlineSlashEditorOptions {
   catalog: InlineSlashCatalog;
@@ -184,6 +189,12 @@ function hasSuggestionItems(
     && suggestions.items.length > 0;
 }
 
+function isInlineSlashRefreshContext(
+  analysis: SlashTokenAnalysis,
+): boolean {
+  return analysis.status === "match";
+}
+
 export function refreshInlineSlashAutocomplete(
   editor: InlineSlashEditorBase,
   provider: InlineSlashProvider,
@@ -201,6 +212,21 @@ export function refreshInlineSlashAutocomplete(
   const hooks = getInlineSlashAutocompleteHooks(editor);
 
   if (!hooks) {
+    return;
+  }
+
+  const snapshotText = snapshot.lines.join("\n");
+  let offset = 0;
+
+  for (let index = 0; index < snapshot.cursorLine; index += 1) {
+    offset += (snapshot.lines[index] ?? "").length + 1;
+  }
+
+  offset += snapshot.cursorCol;
+
+  const analysis = provider.analyzeSnapshotToken(snapshotText, offset);
+
+  if (!isInlineSlashRefreshContext(analysis)) {
     return;
   }
 

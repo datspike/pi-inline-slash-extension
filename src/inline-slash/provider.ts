@@ -141,6 +141,13 @@ export class InlineSlashProvider implements AutocompleteProviderLike {
   }
 
   /**
+   * Expose token analysis for the editor refresh gate without leaking runtime details.
+   */
+  analyzeSnapshotToken(text: string, cursor: number): SlashTokenAnalysis {
+    return this.analyzeToken(text, cursor);
+  }
+
+  /**
    * Build suggestions for an inline slash token or delegate to the core provider.
    */
   getSuggestions(

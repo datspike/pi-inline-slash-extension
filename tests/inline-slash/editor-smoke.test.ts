@@ -408,7 +408,7 @@ describe("InlineSlashEditor smoke collaboration", () => {
       prefix: "/g",
     });
     expect(editor.tryTriggerAutocompleteCalls).toBeGreaterThan(0);
-    expect(delegate.getSuggestionsSpy).toHaveBeenCalled();
+    expect(delegate.getSuggestionsSpy).not.toHaveBeenCalled();
 
     editor.handleInput("s");
 
@@ -484,16 +484,39 @@ describe("InlineSlashEditor smoke collaboration", () => {
     expect(() => editor.handleInput("/")).not.toThrow();
   });
 
-  test("at-refresh-passes-signal: @ refresh passes signal to the core provider", () => {
-    /** at-refresh-passes-signal: core file autocomplete requires options.signal during refresh. */
+  test("at-refresh-does-not-probe-core: @ typing does not trigger the inline refresh shim", () => {
+    /** at-refresh-does-not-probe-core: the extra refresh cycle must stay slash-only. */
     const delegate = createDelegate(null);
     const editor = createEditor(delegate);
 
     expect(() => editor.handleInput("@")).not.toThrow();
-    expect(delegate.getSuggestionsSpy).toHaveBeenCalled();
-    const lastCall = delegate.getSuggestionsSpy.mock.lastCall;
+    expect(delegate.getSuggestionsSpy).toHaveBeenCalledTimes(0);
+  });
 
-    expect(lastCall?.[3]).toMatchObject({ signal: expect.any(AbortSignal) });
+  test("at-second-line-no-inline-probe: second-line @ also skips the inline refresh shim", () => {
+    /** at-second-line-no-inline-probe: second-line file references must not be probed by local slash refresh. */
+    const delegate = createDelegate(null);
+    const editor = createEditor(delegate);
+
+    editor.handleInput("P");
+    editor.handleInput("r");
+    editor.handleInput("e");
+    editor.handleInput("v");
+    editor.handleInput("\n");
+
+    expect(() => editor.handleInput("@")).not.toThrow();
+    expect(delegate.getSuggestionsSpy).toHaveBeenCalledTimes(0);
+  });
+
+  test("at-backspace-no-inline-probe: backspace in @ context stays outside slash refresh", () => {
+    /** at-backspace-no-inline-probe: local refresh must not re-probe core file autocomplete after backspace. */
+    const delegate = createDelegate(null);
+    const editor = createEditor(delegate);
+
+    editor.handleInput("@");
+    editor.handleInput("p");
+    expect(() => editor.handleInput("\b")).not.toThrow();
+    expect(delegate.getSuggestionsSpy).toHaveBeenCalledTimes(0);
   });
 
   test("missing-provider-injection: text stays intact without setAutocompleteProvider", () => {

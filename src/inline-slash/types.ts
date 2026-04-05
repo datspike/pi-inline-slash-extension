@@ -84,13 +84,15 @@ export interface AutocompleteApplyResult {
   cursorCol: number;
 }
 
+export type Awaitable<T> = T | Promise<T>;
+
 export interface AutocompleteProviderLike {
   getSuggestions(
     lines: string[],
     cursorLine: number,
     cursorCol: number,
     options?: AutocompleteRequestOptions,
-  ): AutocompleteSuggestions | null;
+  ): Awaitable<AutocompleteSuggestions | null>;
   applyCompletion(
     lines: string[],
     cursorLine: number,

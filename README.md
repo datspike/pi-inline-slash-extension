@@ -76,7 +76,7 @@ Minimal example:
 | `extensions/inline-slash.ts` | package entrypoint | installable entrypoint for a Pi package and global wiring |
 | `src/inline-slash/command-catalog.ts` | public catalog builder | accepts only public commands from `pi.getCommands()` with source `extension`, `prompt`, `skill`; uses `sourceInfo` as the canonical provenance contract |
 | `src/inline-slash/editor.ts` | editor wrapper | wraps `onSubmit`, forwards the delegate autocomplete provider, and refreshes inline slash suggestions after normal `handleInput` |
-| `src/inline-slash/provider.ts` | autocomplete provider | delegates start-of-message slash to the core provider; builds mid-line and second-line slash suggestions from the local catalog |
+| `src/inline-slash/provider.ts` | autocomplete provider | delegates all non-inline-slash contexts to the core provider; builds mid-line and second-line slash suggestions from the local catalog |
 | `src/inline-slash/classifier.ts` | token classifier and submit boundary | distinguishes command, `skill:*`, and absolute-path candidates around the current token; after `trim()` it reads only the leading token and decides `delegate-core-submit` vs `send-user-message` |
 | `src/inline-slash/editor.ts` | runtime submit shim | `createInlineSlashSubmitStrategy` adds a history entry and calls `sendUserMessage` for an absolute path; everything else goes to core submit |
 | `docs/UPSTREAM-SEAMS.md` | upstream seam request | records the minimal public API needed to remove the remaining dependency on editor internals |
@@ -170,6 +170,7 @@ After loading the extension in Pi, run `/reload` and verify the following scenar
 - the local catalog accepts only public sources `extension`, `prompt`, `skill`;
 - `sourceInfo` is used as the only canonical provenance contract;
 - first-line start-of-message slash autocomplete remains delegated core behavior instead of replacing the core provider locally;
+- non-slash autocomplete contexts such as `@` file references stay delegated to the core provider;
 - submit bypass looks only at the leading token after `trim()`: an absolute path at the start of the message is bypassed, everything else goes to `delegate-core-submit`;
 - `/unknown` intentionally remains delegated core unknown-command handling;
 - the extension requires `sendUserMessage` only for absolute-path bypass; absence of this API is treated as a wiring failure and fails loudly;

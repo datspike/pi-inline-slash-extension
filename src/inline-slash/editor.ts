@@ -3,7 +3,7 @@ import {
   InlineSlashProvider,
   isDelegatedStartOfMessage,
 } from "./provider.js";
-import type { AutocompleteProviderLike, InlineSlashCatalog } from "./types.js";
+import type { AutocompleteProviderLike, AutocompleteSuggestions, InlineSlashCatalog } from "./types.js";
 
 export interface InlineSlashEditorOptions {
   catalog: InlineSlashCatalog;
@@ -174,6 +174,16 @@ export function didEditorSnapshotChange(
 /**
  * Refresh autocomplete after regular editing for inline and second-line slash scenarios.
  */
+function hasSuggestionItems(
+  suggestions: AutocompleteSuggestions | null | Promise<AutocompleteSuggestions | null>,
+): suggestions is AutocompleteSuggestions {
+  return !!suggestions
+    && typeof suggestions === "object"
+    && "items" in suggestions
+    && Array.isArray(suggestions.items)
+    && suggestions.items.length > 0;
+}
+
 export function refreshInlineSlashAutocomplete(
   editor: InlineSlashEditorBase,
   provider: InlineSlashProvider,
@@ -198,6 +208,7 @@ export function refreshInlineSlashAutocomplete(
     snapshot.lines,
     snapshot.cursorLine,
     snapshot.cursorCol,
+    { signal: new AbortController().signal },
   );
 
   if (hooks.isShowingAutocomplete()) {
@@ -205,7 +216,7 @@ export function refreshInlineSlashAutocomplete(
     return;
   }
 
-  if (suggestions && suggestions.items.length > 0) {
+  if (hasSuggestionItems(suggestions)) {
     hooks.tryTriggerAutocomplete();
   }
 }

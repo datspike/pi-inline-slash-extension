@@ -163,11 +163,35 @@ describe("InlineSlashProvider.getSuggestions", () => {
     expect(provider.getSuggestions(["text /zzz"], 0, "text /zzz".length)).toBeNull();
   });
 
-  test("absolute-path-suppression: suppresses suggestions for an absolute-path candidate", () => {
-    /** absolute-path-suppression: /home/... must not become a slash command. */
-    const provider = new InlineSlashProvider({ catalog: createCatalog() });
+  test("absolute-path-suppression: suppresses local slash suggestions for an absolute-path candidate", () => {
+    /** absolute-path-suppression: /home/... must not become a local slash command. */
+    const delegateResult = {
+      items: [{ value: "/home/spike/file.ts", label: "/home/spike/file.ts" }],
+      prefix: "/home/spike/file.ts",
+    };
+    const delegate = createDelegate(delegateResult);
+    const provider = new InlineSlashProvider({ catalog: createCatalog(), delegate });
 
-    expect(provider.getSuggestions(["/home/spike/file.ts"], 0, "/home/spike/file.ts".length)).toBeNull();
+    expect(provider.getSuggestions(["/home/spike/file.ts"], 0, "/home/spike/file.ts".length)).toEqual(delegateResult);
+    expect(delegate.getSuggestionsSpy).toHaveBeenCalledWith(
+      ["/home/spike/file.ts"],
+      0,
+      "/home/spike/file.ts".length,
+      {},
+    );
+  });
+
+  test("at-file-reference-delegate: delegates @ file references to the core provider", () => {
+    /** at-file-reference-delegate: file picker via @ must stay on the upstream provider. */
+    const delegateResult = {
+      items: [{ value: "@src/inline-slash/provider.ts", label: "src/inline-slash/provider.ts" }],
+      prefix: "@pr",
+    };
+    const delegate = createDelegate(delegateResult);
+    const provider = new InlineSlashProvider({ catalog: createCatalog(), delegate });
+
+    expect(provider.getSuggestions(["See @pr"], 0, "See @pr".length)).toEqual(delegateResult);
+    expect(delegate.getSuggestionsSpy).toHaveBeenCalledWith(["See @pr"], 0, "See @pr".length, {});
   });
 
   test("start-of-line-delegate: delegates to the core provider on the first line", () => {
@@ -294,6 +318,36 @@ describe("InlineSlashProvider.applyCompletion", () => {
       3,
       { value: "settings", label: "settings" },
       "/se",
+    );
+  });
+
+  test("at-file-reference-apply-delegate: applies @ completions through the core provider", () => {
+    /** at-file-reference-apply-delegate: file picker apply must stay on the upstream provider. */
+    const delegate = createDelegate({
+      items: [{ value: "@src/inline-slash/provider.ts", label: "src/inline-slash/provider.ts" }],
+      prefix: "@pr",
+    });
+    const provider = new InlineSlashProvider({ catalog: createCatalog(), delegate });
+
+    expect(
+      provider.applyCompletion(
+        ["See @pr"],
+        0,
+        "See @pr".length,
+        { value: "@src/inline-slash/provider.ts", label: "src/inline-slash/provider.ts" },
+        "@pr",
+      ),
+    ).toEqual({
+      lines: ["delegate:@pr:@src/inline-slash/provider.ts"],
+      cursorLine: 0,
+      cursorCol: "See @pr".length + 1,
+    });
+    expect(delegate.applyCompletionSpy).toHaveBeenCalledWith(
+      ["See @pr"],
+      0,
+      "See @pr".length,
+      { value: "@src/inline-slash/provider.ts", label: "src/inline-slash/provider.ts" },
+      "@pr",
     );
   });
 

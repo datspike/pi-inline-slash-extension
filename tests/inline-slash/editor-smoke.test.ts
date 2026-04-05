@@ -15,6 +15,7 @@ import type {
   AutocompleteProviderLike,
   AutocompleteRequestOptions,
   AutocompleteSuggestions,
+  Awaitable,
 } from "../../src/inline-slash/types.js";
 
 function sourceInfo(scope: "user" | "project" | "temporary", resourcePath: string) {
@@ -24,6 +25,12 @@ function sourceInfo(scope: "user" | "project" | "temporary", resourcePath: strin
     scope,
     origin: "top-level",
   } as const;
+}
+
+function unwrapImmediateSuggestions(
+  suggestions: Awaitable<AutocompleteSuggestions | null>,
+): AutocompleteSuggestions | null {
+  return suggestions instanceof Promise ? null : suggestions;
 }
 
 /**
@@ -159,11 +166,15 @@ class FakeCustomEditor {
    */
   tryTriggerAutocomplete(): void {
     this.tryTriggerAutocompleteCalls += 1;
-    this.lastSuggestions = this.provider?.getSuggestions(
-      this.lines,
-      this.cursorLine,
-      this.cursorCol,
-    ) ?? null;
+    this.lastSuggestions = this.provider
+      ? unwrapImmediateSuggestions(
+        this.provider.getSuggestions(
+          this.lines,
+          this.cursorLine,
+          this.cursorCol,
+        ),
+      )
+      : null;
     this.autocompletePrefix = this.lastSuggestions?.prefix ?? "";
 
     if (!this.lastSuggestions) {
@@ -176,11 +187,15 @@ class FakeCustomEditor {
    */
   updateAutocomplete(): void {
     this.updateAutocompleteCalls += 1;
-    this.lastSuggestions = this.provider?.getSuggestions(
-      this.lines,
-      this.cursorLine,
-      this.cursorCol,
-    ) ?? null;
+    this.lastSuggestions = this.provider
+      ? unwrapImmediateSuggestions(
+        this.provider.getSuggestions(
+          this.lines,
+          this.cursorLine,
+          this.cursorCol,
+        ),
+      )
+      : null;
     this.autocompletePrefix = this.lastSuggestions?.prefix ?? "";
 
     if (!this.lastSuggestions) {
@@ -393,7 +408,7 @@ describe("InlineSlashEditor smoke collaboration", () => {
       prefix: "/g",
     });
     expect(editor.tryTriggerAutocompleteCalls).toBeGreaterThan(0);
-    expect(delegate.getSuggestionsSpy).not.toHaveBeenCalled();
+    expect(delegate.getSuggestionsSpy).toHaveBeenCalled();
 
     editor.handleInput("s");
 
@@ -453,6 +468,32 @@ describe("InlineSlashEditor smoke collaboration", () => {
 
     expect(editor.lastSuggestions).toEqual(delegateResult);
     expect(delegate.getSuggestionsSpy).toHaveBeenLastCalledWith(["/g"], 0, 2, {});
+  });
+
+  test("async-delegate-no-crash: async core suggestions do not crash the extra refresh cycle", () => {
+    /** async-delegate-no-crash: the refresh shim must ignore async delegate promises safely. */
+    const delegate: AutocompleteProviderLike = {
+      getSuggestions: vi.fn(async () => ({
+        items: [{ value: "gsd", label: "gsd", description: "Core slash" }],
+        prefix: "/",
+      })),
+      applyCompletion: vi.fn((lines, cursorLine, cursorCol) => ({ lines, cursorLine, cursorCol })),
+    };
+    const editor = createEditor(delegate);
+
+    expect(() => editor.handleInput("/")).not.toThrow();
+  });
+
+  test("at-refresh-passes-signal: @ refresh passes signal to the core provider", () => {
+    /** at-refresh-passes-signal: core file autocomplete requires options.signal during refresh. */
+    const delegate = createDelegate(null);
+    const editor = createEditor(delegate);
+
+    expect(() => editor.handleInput("@")).not.toThrow();
+    expect(delegate.getSuggestionsSpy).toHaveBeenCalled();
+    const lastCall = delegate.getSuggestionsSpy.mock.lastCall;
+
+    expect(lastCall?.[3]).toMatchObject({ signal: expect.any(AbortSignal) });
   });
 
   test("missing-provider-injection: text stays intact without setAutocompleteProvider", () => {

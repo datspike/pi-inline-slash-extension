@@ -5,6 +5,7 @@ import type {
   AutocompleteProviderLike,
   AutocompleteRequestOptions,
   AutocompleteSuggestions,
+  Awaitable,
   InlineSlashCatalog,
   SlashTokenAnalysis,
   SlashTokenBounds,
@@ -147,7 +148,7 @@ export class InlineSlashProvider implements AutocompleteProviderLike {
     cursorLine: number,
     cursorCol: number,
     options: AutocompleteRequestOptions = {},
-  ): AutocompleteSuggestions | null {
+  ): Awaitable<AutocompleteSuggestions | null> {
     if (isDelegatedStartOfMessage(lines, cursorLine, cursorCol)) {
       return this.delegate?.getSuggestions(lines, cursorLine, cursorCol, options) ?? null;
     }
@@ -155,20 +156,20 @@ export class InlineSlashProvider implements AutocompleteProviderLike {
     const offset = cursorToOffset(lines, cursorLine, cursorCol);
 
     if (offset === null) {
-      return null;
+      return this.delegate?.getSuggestions(lines, cursorLine, cursorCol, options) ?? null;
     }
 
     const text = joinLines(lines);
     const analysis = this.analyzeToken(text, offset);
 
     if (analysis.status !== "match" || !isValidBounds(analysis.replacement, text.length)) {
-      return null;
+      return this.delegate?.getSuggestions(lines, cursorLine, cursorCol, options) ?? null;
     }
 
     const items = filterCatalog(this.catalog, analysis.query);
 
     if (items.length === 0) {
-      return null;
+      return this.delegate?.getSuggestions(lines, cursorLine, cursorCol, options) ?? null;
     }
 
     return {
@@ -198,7 +199,7 @@ export class InlineSlashProvider implements AutocompleteProviderLike {
     const offset = cursorToOffset(lines, cursorLine, cursorCol);
 
     if (offset === null) {
-      return {
+      return this.delegate?.applyCompletion(lines, cursorLine, cursorCol, item, prefix) ?? {
         lines,
         cursorLine,
         cursorCol,
@@ -209,7 +210,7 @@ export class InlineSlashProvider implements AutocompleteProviderLike {
     const analysis = this.analyzeToken(text, offset);
 
     if (analysis.status !== "match" || !isValidBounds(analysis.replacement, text.length)) {
-      return {
+      return this.delegate?.applyCompletion(lines, cursorLine, cursorCol, item, prefix) ?? {
         lines,
         cursorLine,
         cursorCol,

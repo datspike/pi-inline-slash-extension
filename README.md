@@ -55,7 +55,7 @@ pi install /absolute/path/to/pi-inline-slash-extension
 <!-- verifier:readme/architecture -->
 ## How it works
 
-The extension is wired through the package entrypoint `extensions/inline-slash.ts`. Activation happens on `session_start` only when `ctx.hasUI` is true.
+The extension is wired through the package entrypoint `extensions/inline-slash.ts` and activates on `session_start` when `ctx.hasUI` is true.
 
 High-level flow:
 
@@ -64,7 +64,7 @@ High-level flow:
 3. attaches submit routing through `createInlineSlashSubmitStrategy`;
 4. registers the editor through `ctx.ui.setEditorComponent(...)`.
 
-Core is not patched. The extension adds behavior at the extension layer and keeps the standard first-line slash path delegated to core.
+Core is not patched. More detail: `docs/ARCHITECTURE.md`.
 
 ## Installation options
 
@@ -103,16 +103,14 @@ Typical settings file:
 <!-- verifier:readme/runtime-seams -->
 ## Implementation notes
 
-The main code paths are intentionally small and isolated:
+Main files:
 
-| File | Purpose |
-| --- | --- |
-| `extensions/inline-slash.ts` | package entrypoint and runtime wiring |
-| `src/inline-slash/command-catalog.ts` | public catalog builder based on `pi.getCommands()` |
-| `src/inline-slash/provider.ts` | inline autocomplete provider for mid-line and second-line slash suggestions |
-| `src/inline-slash/classifier.ts` | submit routing boundary for command vs absolute path |
-| `src/inline-slash/editor.ts` | editor wrapper and `createInlineSlashSubmitStrategy` |
-| `docs/UPSTREAM-SEAMS.md` | remaining upstream seam request |
+- `extensions/inline-slash.ts`
+- `src/inline-slash/command-catalog.ts`
+- `src/inline-slash/provider.ts`
+- `src/inline-slash/classifier.ts`
+- `src/inline-slash/editor.ts`
+- `docs/UPSTREAM-SEAMS.md`
 
 Important boundaries:
 
@@ -121,7 +119,7 @@ Important boundaries:
 - `sendUserMessage` is required only for the absolute-path bypass path;
 - `/unknown` stays on the delegated core path.
 
-The stable public seams cover most of the solution. The remaining fragility is isolated in `src/inline-slash/editor.ts`, where inline refresh still depends on a narrow editor runtime seam that is not yet formalized as a public extension API.
+The remaining editor seam is isolated in `src/inline-slash/editor.ts`. More detail: `docs/ARCHITECTURE.md` and `docs/UPSTREAM-SEAMS.md`.
 
 <!-- verifier:readme/verified-scenarios -->
 ## What is verified
@@ -134,11 +132,7 @@ Automated proof covers the shipped user-facing behavior:
 - `/home/spike/file.ts` and `/tmp/log.txt` bypass slash dispatch on submit;
 - `/gsd auto`, `/skill:create-skill demo`, and `/unknown` remain on the delegated core submit path.
 
-Test coverage lives in:
-
-- `tests/inline-slash/provider.test.ts`;
-- `tests/inline-slash/submit-routing.test.ts`;
-- `tests/inline-slash/editor-smoke.test.ts`.
+Detailed coverage and command breakdown: `docs/VERIFICATION.md`.
 
 <!-- verifier:readme/verification-commands -->
 ## Verification
@@ -159,7 +153,7 @@ npm run verify:s02
 bash scripts/verify-s02.sh
 ```
 
-`verify:s03` is the main verification entrypoint. It runs the shipped proof surface and validates the README markers used by the repository guards.
+`verify:s03` is the main verification entrypoint. It runs the shipped proof surface and validates the README markers used by the repository guards. More detail: `docs/VERIFICATION.md`.
 
 ## Manual `/reload` checklist
 
@@ -206,4 +200,6 @@ Reasons to revisit an upstream patch:
 
 ## Related docs
 
+- `docs/ARCHITECTURE.md` for runtime wiring and boundaries.
+- `docs/VERIFICATION.md` for automated and manual proof.
 - `docs/UPSTREAM-SEAMS.md` for the remaining editor/runtime seam request.

@@ -1,9 +1,22 @@
 {
   "name": "pi-inline-slash-extension",
   "version": "0.1.0",
+  "description": "Pi extension that adds inline slash autocomplete and absolute-path submit bypass without forking core.",
   "private": false,
   "type": "module",
-  "keywords": ["pi-package"],
+  "license": "MIT",
+  "keywords": ["pi-package", "pi", "extension", "autocomplete", "slash-commands"],
+  "files": [
+    "extensions",
+    "src",
+    ".pi/extensions/inline-slash.ts",
+    "docs/UPSTREAM-SEAMS.md",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "pi": {
     "extensions": ["./extensions/inline-slash.ts"]
   },

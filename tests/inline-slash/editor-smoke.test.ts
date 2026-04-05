@@ -27,7 +27,7 @@ function sourceInfo(scope: "user" | "project" | "temporary", resourcePath: strin
 }
 
 /**
- * Минимальный autocomplete и submit harness, который имитирует core editor cycle.
+ * Minimal autocomplete and submit harness that imitates the core editor cycle.
  */
 class FakeCustomEditor {
   private lines = [""];
@@ -47,35 +47,35 @@ class FakeCustomEditor {
   constructor(..._args: unknown[]) {}
 
   /**
-   * Текущий текст буфера.
+   * Current buffer text.
    */
   getText(): string {
     return this.lines.join("\n");
   }
 
   /**
-   * Строки буфера для provider seam.
+   * Buffer lines for the provider seam.
    */
   getLines(): string[] {
     return [...this.lines];
   }
 
   /**
-   * Координаты курсора для smoke harness.
+   * Cursor coordinates for the smoke harness.
    */
   getCursor(): { line: number; col: number } {
     return { line: this.cursorLine, col: this.cursorCol };
   }
 
   /**
-   * История отправок для parity assertions.
+   * Submission history for parity assertions.
    */
   getHistory(): string[] {
     return [...this.history];
   }
 
   /**
-   * Добавление submit в историю по тем же правилам, что и у core editor.
+   * Add submit history entries using the same rules as the core editor.
    */
   addToHistory(text: string): void {
     const trimmed = text.trim();
@@ -92,7 +92,7 @@ class FakeCustomEditor {
   }
 
   /**
-   * Прямое задание текста без side effects.
+   * Set text directly without side effects.
    */
   setText(text: string): void {
     this.lines = text.split("\n");
@@ -102,21 +102,21 @@ class FakeCustomEditor {
   }
 
   /**
-   * Инъекция autocomplete provider в harness.
+   * Inject the autocomplete provider into the harness.
    */
   setAutocompleteProvider(provider: AutocompleteProviderLike): void {
     this.provider = provider;
   }
 
   /**
-   * Признак активного autocomplete popup.
+   * Whether the autocomplete popup is currently active.
    */
   isShowingAutocomplete(): boolean {
     return this.lastSuggestions !== null;
   }
 
   /**
-   * Имитация core editor submit cycle с очисткой буфера до вызова callback.
+   * Imitate the core editor submit cycle, clearing the buffer before the callback.
    */
   submit(): void {
     const result = this.getText().trim();
@@ -131,7 +131,7 @@ class FakeCustomEditor {
   }
 
   /**
-   * Имитация core editor input cycle.
+   * Imitate the core editor input cycle.
    */
   handleInput(data: string): void {
     if (data === "\n") {
@@ -155,7 +155,7 @@ class FakeCustomEditor {
   }
 
   /**
-   * Явный запуск autocomplete, как это делает core editor.
+   * Explicitly trigger autocomplete the same way core does.
    */
   tryTriggerAutocomplete(): void {
     this.tryTriggerAutocompleteCalls += 1;
@@ -172,7 +172,7 @@ class FakeCustomEditor {
   }
 
   /**
-   * Обновление существующих suggestions без полной перезагрузки harness.
+   * Refresh existing suggestions without reloading the whole harness.
    */
   updateAutocomplete(): void {
     this.updateAutocompleteCalls += 1;
@@ -189,7 +189,7 @@ class FakeCustomEditor {
   }
 
   /**
-   * Сброс popup state.
+   * Reset popup state.
    */
   cancelAutocomplete(): void {
     this.cancelAutocompleteCalls += 1;
@@ -198,7 +198,7 @@ class FakeCustomEditor {
   }
 
   /**
-   * Вставка текста в текущую позицию курсора.
+   * Insert text at the current cursor position.
    */
   private insertText(text: string): void {
     const currentLine = this.lines[this.cursorLine] ?? "";
@@ -210,7 +210,7 @@ class FakeCustomEditor {
   }
 
   /**
-   * Разрыв строки по текущему курсору.
+   * Split the line at the current cursor position.
    */
   private insertNewLine(): void {
     const currentLine = this.lines[this.cursorLine] ?? "";
@@ -224,7 +224,7 @@ class FakeCustomEditor {
   }
 
   /**
-   * Backspace для negative-path smoke cases.
+   * Backspace for negative-path smoke cases.
    */
   private deleteBackward(): void {
     if (this.cursorCol > 0) {
@@ -249,7 +249,7 @@ class FakeCustomEditor {
   }
 
   /**
-   * Имитация встроенного first-line slash trigger из core editor.
+   * Imitate the built-in first-line slash trigger from the core editor.
    */
   private isCoreStartOfLineSlashContext(): boolean {
     if (this.cursorLine !== 0) {
@@ -261,7 +261,7 @@ class FakeCustomEditor {
 }
 
 /**
- * Локальный каталог smoke scenarios.
+ * Local catalog for smoke scenarios.
  */
 function createCatalog() {
   return buildCommandCatalog([
@@ -287,7 +287,7 @@ function createCatalog() {
 }
 
 /**
- * Delegate provider с шпионами для start-of-line regression.
+ * Delegate provider with spies for start-of-line regression.
  */
 function createDelegate(
   result: AutocompleteSuggestions | null,
@@ -326,7 +326,7 @@ function createDelegate(
 }
 
 /**
- * Создание editor wrapper поверх fake harness.
+ * Create the editor wrapper on top of the fake harness.
  */
 function createEditor(
   provider?: AutocompleteProviderLike,
@@ -347,7 +347,7 @@ function createEditor(
 }
 
 /**
- * Сборка submit harness поверх реального extension submit strategy.
+ * Build the submit harness on top of the real extension submit strategy.
  */
 function createSubmitHarness(options?: {
   sendUserMessage?: (text: string) => void;
@@ -375,15 +375,15 @@ function createSubmitHarness(options?: {
 }
 
 describe("InlineSlashEditor smoke collaboration", () => {
-  test("second-line-gsd-refresh: второй строке хватает обычного typing cycle для /gsd", () => {
-    /** second-line-gsd-refresh: first-line restriction core editor снимается wrapper refresh cycle. */
+  test("second-line-gsd-refresh: a regular typing cycle is enough for /gsd on the second line", () => {
+    /** second-line-gsd-refresh: the wrapper refresh cycle removes the core editor first-line restriction. */
     const delegate = createDelegate(null);
     const editor = createEditor(delegate);
 
-    editor.handleInput("П");
-    editor.handleInput("р");
-    editor.handleInput("е");
-    editor.handleInput("в");
+    editor.handleInput("P");
+    editor.handleInput("r");
+    editor.handleInput("e");
+    editor.handleInput("v");
     editor.handleInput("\n");
     editor.handleInput("/");
     editor.handleInput("g");
@@ -401,11 +401,11 @@ describe("InlineSlashEditor smoke collaboration", () => {
     expect(editor.updateAutocompleteCalls).toBeGreaterThan(0);
   });
 
-  test("inline-skill-refresh: mid-line skill token обновляет suggestions внутри обычного текста", () => {
-    /** inline-skill-refresh: inline skill autocomplete не требует start-of-line первой строки. */
+  test("inline-skill-refresh: a mid-line skill token refreshes suggestions inside regular text", () => {
+    /** inline-skill-refresh: inline skill autocomplete does not require the first-line start-of-line position. */
     const editor = createEditor(createDelegate(null));
 
-    editor.setText("Нужно включить /skill:create");
+    editor.setText("Need to enable /skill:create");
     editor.handleInput("-");
 
     expect(editor.lastSuggestions).toEqual({
@@ -420,11 +420,11 @@ describe("InlineSlashEditor smoke collaboration", () => {
     });
   });
 
-  test("inline-short-skill-refresh: short /commit даёт canonical skill suggestion", () => {
-    /** inline-short-skill-refresh: plain short skill alias должен работать как в upstream skill autocomplete. */
+  test("inline-short-skill-refresh: short /commit yields the canonical skill suggestion", () => {
+    /** inline-short-skill-refresh: the plain short skill alias must behave the same as upstream skill autocomplete. */
     const editor = createEditor(createDelegate(null));
 
-    editor.setText("Нужно вызвать /commit");
+    editor.setText("Need to call /commit");
     editor.handleInput("-");
 
     expect(editor.lastSuggestions).toEqual({
@@ -439,8 +439,8 @@ describe("InlineSlashEditor smoke collaboration", () => {
     });
   });
 
-  test("start-of-line-regression: первая строка остаётся delegated core path", () => {
-    /** start-of-line-regression: wrapper не должен перехватывать корректный upstream slash сценарий. */
+  test("start-of-line-regression: the first line remains the delegated core path", () => {
+    /** start-of-line-regression: the wrapper must not intercept a valid upstream slash scenario. */
     const delegateResult = {
       items: [{ value: "gsd", label: "gsd", description: "Core slash" }],
       prefix: "/g",
@@ -455,8 +455,8 @@ describe("InlineSlashEditor smoke collaboration", () => {
     expect(delegate.getSuggestionsSpy).toHaveBeenLastCalledWith(["/g"], 0, 2, {});
   });
 
-  test("missing-provider-injection: без setAutocompleteProvider текст не повреждается", () => {
-    /** missing-provider-injection: отсутствие core injection должно давать safe no-op, а не corruption. */
+  test("missing-provider-injection: text stays intact without setAutocompleteProvider", () => {
+    /** missing-provider-injection: missing core injection must result in a safe no-op, not corruption. */
     const editor = createEditor(undefined);
 
     editor.handleInput("t");
@@ -471,23 +471,23 @@ describe("InlineSlashEditor smoke collaboration", () => {
     expect(editor.lastSuggestions).toBeNull();
   });
 
-  test("empty-catalog-inline-no-op: пустой каталог не оставляет stale slash popup", () => {
-    /** empty-catalog-inline-no-op: malformed catalog input не должен ронять editor cycle. */
+  test("empty-catalog-inline-no-op: an empty catalog does not leave a stale slash popup", () => {
+    /** empty-catalog-inline-no-op: malformed catalog input must not break the editor cycle. */
     const emptyCatalog = buildCommandCatalog([]);
     const editor = createEditor(createDelegate(null), emptyCatalog);
 
-    editor.setText("строка /g");
+    editor.setText("line /g");
     editor.handleInput("s");
 
-    expect(editor.getText()).toBe("строка /gs");
+    expect(editor.getText()).toBe("line /gs");
     expect(editor.lastSuggestions).toBeNull();
     expect(editor.tryTriggerAutocompleteCalls).toBe(0);
   });
 });
 
 describe("InlineSlashEditor submit routing smoke", () => {
-  test("submit-home-path-bypass: /home path уходит через sendUserMessage и не вызывает core submit", () => {
-    /** submit-home-path-bypass: leading absolute path bypass'ит core callback, но сохраняет clear/history parity. */
+  test("submit-home-path-bypass: a /home path goes through sendUserMessage and does not call core submit", () => {
+    /** submit-home-path-bypass: a leading absolute path bypasses the core callback while preserving clear/history parity. */
     const { editor, coreOnSubmit, sendUserMessage } = createSubmitHarness();
 
     editor.setText("/home/spike/file.ts");
@@ -500,8 +500,8 @@ describe("InlineSlashEditor submit routing smoke", () => {
     expect(editor.getHistory()).toEqual(["/home/spike/file.ts"]);
   });
 
-  test("submit-tmp-path-bypass: /tmp path повторно идёт через bypass без stale submit state", () => {
-    /** submit-tmp-path-bypass: второй absolute-path сценарий должен работать как обычное user message submit. */
+  test("submit-tmp-path-bypass: a /tmp path goes through bypass again without stale submit state", () => {
+    /** submit-tmp-path-bypass: the second absolute-path scenario must behave like a regular user-message submit. */
     const { editor, coreOnSubmit, sendUserMessage } = createSubmitHarness();
 
     editor.setText("/tmp/log.txt");
@@ -517,8 +517,8 @@ describe("InlineSlashEditor submit routing smoke", () => {
     expect(editor.getHistory()).toEqual(["/tmp/log.txt"]);
   });
 
-  test("submit-gsd-delegate: /gsd auto остаётся delegated core submit", () => {
-    /** submit-gsd-delegate: реальная slash-команда не должна уходить через обычный user-message bypass. */
+  test("submit-gsd-delegate: /gsd auto stays delegated core submit", () => {
+    /** submit-gsd-delegate: a real slash command must not go through the regular user-message bypass. */
     const { editor, coreOnSubmit, sendUserMessage } = createSubmitHarness();
 
     editor.setText("/gsd auto");
@@ -531,8 +531,8 @@ describe("InlineSlashEditor submit routing smoke", () => {
     expect(editor.getHistory()).toEqual(["/gsd auto"]);
   });
 
-  test("submit-skill-delegate: /skill:create-skill demo остаётся delegated core submit", () => {
-    /** submit-skill-delegate: skill submit path должен остаться на upstream command dispatcher. */
+  test("submit-skill-delegate: /skill:create-skill demo stays delegated core submit", () => {
+    /** submit-skill-delegate: the skill submit path must remain on the upstream command dispatcher. */
     const { editor, coreOnSubmit, sendUserMessage } = createSubmitHarness();
 
     editor.setText("/skill:create-skill demo");
@@ -545,8 +545,8 @@ describe("InlineSlashEditor submit routing smoke", () => {
     expect(editor.getHistory()).toEqual(["/skill:create-skill demo"]);
   });
 
-  test("submit-unknown-delegate: /unknown остаётся delegated core submit guard-case", () => {
-    /** submit-unknown-delegate: syntactic unknown slash должен дойти до core unknown-command handling. */
+  test("submit-unknown-delegate: /unknown stays a delegated core submit guard case", () => {
+    /** submit-unknown-delegate: a syntactic unknown slash must reach core unknown-command handling. */
     const { editor, coreOnSubmit, sendUserMessage } = createSubmitHarness();
 
     editor.setText("/unknown");
@@ -559,8 +559,8 @@ describe("InlineSlashEditor submit routing smoke", () => {
     expect(editor.getHistory()).toEqual(["/unknown"]);
   });
 
-  test("missing-sender-hard-failure: path bypass без sendUserMessage падает явно", () => {
-    /** missing-sender-hard-failure: broken runtime wiring не должен молча делегировать absolute path в core submit. */
+  test("missing-sender-hard-failure: path bypass without sendUserMessage fails loudly", () => {
+    /** missing-sender-hard-failure: broken runtime wiring must not silently delegate an absolute path to core submit. */
     const submitStrategy = createInlineSlashSubmitStrategy({
       sendUserMessage: undefined,
     } as Parameters<typeof createInlineSlashSubmitStrategy>[0]);
@@ -663,15 +663,15 @@ describe("inline slash extension entrypoint", () => {
     expect(editor?.onSubmit).toBeTypeOf("function");
   }
 
-  test("package-entrypoint-loader: package entrypoint импортируется и wiring доходит до setEditorComponent", async () => {
-    /** package-entrypoint-loader: package entrypoint должен быть installable без project-local shim. */
+  test("package-entrypoint-loader: package entrypoint imports and wiring reaches setEditorComponent", async () => {
+    /** package-entrypoint-loader: the package entrypoint must be installable without the project-local shim. */
     const activate = await loadEntrypoint("extensions/inline-slash.ts");
 
     assertEntrypointWiring(activate, "extensions/inline-slash.ts");
   });
 
-  test("project-shim-loader: project-local shim реэкспортирует package entrypoint", async () => {
-    /** project-shim-loader: .pi shim должен оставаться совместимым с auto-discovery project scope. */
+  test("project-shim-loader: the project-local shim re-exports the package entrypoint", async () => {
+    /** project-shim-loader: the .pi shim must remain compatible with project-scope auto-discovery. */
     const activate = await loadEntrypoint(".pi/extensions/inline-slash.ts");
 
     assertEntrypointWiring(activate, ".pi/extensions/inline-slash.ts");

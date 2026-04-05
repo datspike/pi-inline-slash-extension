@@ -3,15 +3,15 @@ import { describe, expect, test } from "vitest";
 import { normalizeSubmitText, resolveSubmitRouting } from "../../src/inline-slash/classifier.js";
 
 describe("normalizeSubmitText", () => {
-  test("submit-trim-parity: повторяет core trim для submit boundary", () => {
-    /** submit-trim-parity: helper должен смотреть на тот же текст, который потом увидит core path. */
+  test("submit-trim-parity: mirrors core trim for the submit boundary", () => {
+    /** submit-trim-parity: the helper must look at the same text that the core path will later see. */
     expect(normalizeSubmitText("  /home/spike/file.ts\n")).toBe("/home/spike/file.ts");
   });
 });
 
 describe("resolveSubmitRouting", () => {
-  test("path-home-bypass: leading /home/... идёт через send-user-message", () => {
-    /** path-home-bypass: абсолютный путь не должен уходить в delegated slash dispatch. */
+  test("path-home-bypass: leading /home/... goes through send-user-message", () => {
+    /** path-home-bypass: an absolute path must not go through delegated slash dispatch. */
     expect(resolveSubmitRouting("/home/spike/file.ts")).toEqual({
       route: "send-user-message",
       preparedText: "/home/spike/file.ts",
@@ -29,8 +29,8 @@ describe("resolveSubmitRouting", () => {
     });
   });
 
-  test("path-tmp-bypass-after-trim: leading /tmp/... с пробелами тоже идёт через send-user-message", () => {
-    /** path-tmp-bypass-after-trim: helper обязан повторять submit trim и затем делать routing по leading token. */
+  test("path-tmp-bypass-after-trim: leading /tmp/... with surrounding whitespace still goes through send-user-message", () => {
+    /** path-tmp-bypass-after-trim: the helper must mirror submit trim and then route by the leading token. */
     expect(resolveSubmitRouting("  \n /tmp/log.txt  ")).toEqual({
       route: "send-user-message",
       preparedText: "/tmp/log.txt",
@@ -48,8 +48,8 @@ describe("resolveSubmitRouting", () => {
     });
   });
 
-  test("delegate-gsd-command: /gsd auto остаётся delegated core submit", () => {
-    /** delegate-gsd-command: реальная slash-команда не должна случайно bypass'иться как path. */
+  test("delegate-gsd-command: /gsd auto stays delegated core submit", () => {
+    /** delegate-gsd-command: a real slash command must not be bypassed as a path by accident. */
     expect(resolveSubmitRouting("/gsd auto")).toEqual({
       route: "delegate-core-submit",
       preparedText: "/gsd auto",
@@ -66,8 +66,8 @@ describe("resolveSubmitRouting", () => {
     });
   });
 
-  test("delegate-skill-command: /skill:create-skill demo остаётся delegated core submit", () => {
-    /** delegate-skill-command: skill token с аргументом обязан остаться на core path. */
+  test("delegate-skill-command: /skill:create-skill demo stays delegated core submit", () => {
+    /** delegate-skill-command: a skill token with an argument must remain on the core path. */
     expect(resolveSubmitRouting(" /skill:create-skill demo ")).toEqual({
       route: "delegate-core-submit",
       preparedText: "/skill:create-skill demo",
@@ -84,8 +84,8 @@ describe("resolveSubmitRouting", () => {
     });
   });
 
-  test("delegate-unknown-command-shape: /unknown остаётся delegated core submit", () => {
-    /** delegate-unknown-command-shape: syntactic command shape не даёт права bypass'ить core submit. */
+  test("delegate-unknown-command-shape: /unknown stays delegated core submit", () => {
+    /** delegate-unknown-command-shape: syntactic command shape alone must not authorize bypassing core submit. */
     expect(resolveSubmitRouting("/unknown")).toEqual({
       route: "delegate-core-submit",
       preparedText: "/unknown",
@@ -102,8 +102,8 @@ describe("resolveSubmitRouting", () => {
     });
   });
 
-  test("delegate-malformed-slash-shape: неподдерживаемый slash token делегируется", () => {
-    /** delegate-malformed-slash-shape: malformed slash input не должен превращаться в path bypass. */
+  test("delegate-malformed-slash-shape: an unsupported slash token is delegated", () => {
+    /** delegate-malformed-slash-shape: malformed slash input must not turn into path bypass. */
     expect(resolveSubmitRouting("/bad_token rest")).toEqual({
       route: "delegate-core-submit",
       preparedText: "/bad_token rest",
@@ -117,8 +117,8 @@ describe("resolveSubmitRouting", () => {
     });
   });
 
-  test("delegate-lone-slash: одинокий slash делегируется без исключения", () => {
-    /** delegate-lone-slash: malformed slash input должен безопасно уйти в delegated path. */
+  test("delegate-lone-slash: a lone slash is delegated without throwing", () => {
+    /** delegate-lone-slash: malformed slash input must safely go through the delegated path. */
     expect(resolveSubmitRouting("/")).toEqual({
       route: "delegate-core-submit",
       preparedText: "/",
@@ -132,12 +132,12 @@ describe("resolveSubmitRouting", () => {
     });
   });
 
-  test("delegate-plain-text: обычный текст остаётся delegated core submit", () => {
-    /** delegate-plain-text: helper не должен вводить новую эвристику для неслашового submit. */
-    expect(resolveSubmitRouting("обычный текст")).toEqual({
+  test("delegate-plain-text: plain text stays delegated core submit", () => {
+    /** delegate-plain-text: the helper must not add a new heuristic for non-slash submit. */
+    expect(resolveSubmitRouting("plain text")).toEqual({
       route: "delegate-core-submit",
-      preparedText: "обычный текст",
-      leadingToken: "обычный",
+      preparedText: "plain text",
+      leadingToken: "plain",
       analysis: {
         status: "no-match",
         kind: "none",
@@ -147,8 +147,8 @@ describe("resolveSubmitRouting", () => {
     });
   });
 
-  test("delegate-empty-after-trim: пустой и whitespace-only submit делегируется", () => {
-    /** delegate-empty-after-trim: trim boundary не должен бросать исключение на пустом буфере. */
+  test("delegate-empty-after-trim: empty and whitespace-only submit is delegated", () => {
+    /** delegate-empty-after-trim: the trim boundary must not throw on an empty buffer. */
     expect(resolveSubmitRouting("  \n ")).toEqual({
       route: "delegate-core-submit",
       preparedText: "",
@@ -162,11 +162,11 @@ describe("resolveSubmitRouting", () => {
     });
   });
 
-  test("leading-token-only-on-long-buffer: helper читает только leading context на multiline buffer", () => {
-    /** leading-token-only-on-long-buffer: trailing lines не должны менять route для leading absolute path. */
-    expect(resolveSubmitRouting("\n\n/home/spike/file.ts\nвторая строка\n/gsd")).toEqual({
+  test("leading-token-only-on-long-buffer: the helper reads only the leading context on a multiline buffer", () => {
+    /** leading-token-only-on-long-buffer: trailing lines must not change the route for a leading absolute path. */
+    expect(resolveSubmitRouting("\n\n/home/spike/file.ts\nsecond line\n/gsd")).toEqual({
       route: "send-user-message",
-      preparedText: "/home/spike/file.ts\nвторая строка\n/gsd",
+      preparedText: "/home/spike/file.ts\nsecond line\n/gsd",
       leadingToken: "/home/spike/file.ts",
       analysis: {
         status: "absolute-path-candidate",

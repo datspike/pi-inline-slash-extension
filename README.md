@@ -1,60 +1,60 @@
 # pi-inline-slash-extension
 
-Shipped extension для Pi, который добавляет inline slash autocomplete внутри текста и bypass для leading absolute paths без форка core.
+Shipped extension for Pi that adds inline slash autocomplete inside regular text and a bypass for leading absolute paths without forking core.
 
 <!-- verifier:readme/shipped-scope -->
-## Что реально shipped
+## What is actually shipped
 
-- inline slash и skill autocomplete работает не только в начале первой строки, но и mid-line и на второй строке;
-- leading absolute path вроде `/home/spike/file.ts` и `/tmp/log.txt` уходит как обычное user message, а не как slash-команда;
-- start-of-line slash path первой строки остаётся delegated core behavior;
-- текущий scope доказан локальными тестами и shell verifier'ами, без upstream patch.
+- inline slash and skill autocomplete works not only at the start of the first line, but also mid-line and on the second line;
+- a leading absolute path such as `/home/spike/file.ts` or `/tmp/log.txt` is sent as a normal user message instead of being treated as a slash command;
+- the first-line start-of-line slash path remains delegated core behavior;
+- the current scope is proven by local tests and shell verifiers, without an upstream patch.
 
-## Два режима использования
+## Two usage modes
 
 ### Local workaround
 
-Основной практический режим для этого репозитория - project-local workaround через `.pi/extensions/inline-slash.ts`. Он удобен, если нужна узкая правка UX без ожидания изменений в Pi core.
+The main practical mode for this repository is a project-local workaround through `.pi/extensions/inline-slash.ts`. It is useful when you need a narrow UX fix without waiting for changes in Pi core.
 
 ### Ecosystem package
 
-Дополнительно extension оформлен как Pi package entrypoint через `extensions/inline-slash.ts` и `package.json -> pi.extensions`. Это делает пакет installable для P-экосистемы, но не отменяет того факта, что inline autocomplete всё ещё зависит от части runtime seam редактора, которая пока не оформлена как стабильный публичный API.
+The extension is also packaged as a Pi package entrypoint through `extensions/inline-slash.ts` and `package.json -> pi.extensions`. That makes the package installable in the Pi ecosystem, but it does not change the fact that inline autocomplete still depends on part of the editor runtime seam that is not yet formalized as a stable public API.
 
 <!-- verifier:readme/architecture -->
-## Архитектура
+## Architecture
 
-Расширение подключается через package entrypoint `extensions/inline-slash.ts`, а project-local shim `.pi/extensions/inline-slash.ts` только реэкспортирует его. Активация идёт на `session_start` только при `ctx.hasUI`.
+The extension is wired through the package entrypoint `extensions/inline-slash.ts`, while the project-local shim `.pi/extensions/inline-slash.ts` only re-exports it. Activation happens on `session_start` only when `ctx.hasUI` is true.
 
 Entry point:
 
-1. строит public inline catalog через `buildCommandCatalog(api.getCommands())`;
-2. создаёт editor wrapper поверх `CustomEditor` через `createInlineSlashEditorClass(...)`;
-3. подключает submit strategy через `createInlineSlashSubmitStrategy(api)`;
-4. регистрирует новый editor через `ctx.ui.setEditorComponent(...)`.
+1. builds the public inline catalog via `buildCommandCatalog(api.getCommands())`;
+2. creates an editor wrapper on top of `CustomEditor` via `createInlineSlashEditorClass(...)`;
+3. attaches the submit strategy via `createInlineSlashSubmitStrategy(api)`;
+4. registers the new editor through `ctx.ui.setEditorComponent(...)`.
 
-Core не патчится: extension расширяет editor/runtime seam поверх публичного API и оставляет штатный first-line slash path в делегированном режиме.
+Core is not patched: the extension extends the editor/runtime seam on top of public API and keeps the standard first-line slash path delegated to core.
 
-## Как подключить расширение к Pi
+## How to connect the extension to Pi
 
-### Project-local подключение
+### Project-local setup
 
-Pi auto-discovery ищет project-local extensions в `.pi/extensions/`. В этом репозитории shipped shim уже лежит по нужному пути:
+Pi auto-discovery looks for project-local extensions in `.pi/extensions/`. In this repository the shipped shim is already in the expected location:
 
 ```bash
 pi
 ```
 
-После старта откройте UI-сессию и выполните `/reload`, чтобы прогнать сценарии из checklist ниже.
+After startup, open a UI session and run `/reload` to execute the checklist scenarios below.
 
-### Установка как Pi package
+### Install as a Pi package
 
-Package entrypoint расположен в `extensions/inline-slash.ts`, а в `package.json` объявлен `pi.extensions` manifest. Локальная установка:
+The package entrypoint is located at `extensions/inline-slash.ts`, and `package.json` declares the `pi.extensions` manifest. Local install:
 
 ```bash
 pi install /absolute/path/to/pi-inline-slash-extension
 ```
 
-Или project-local через `.pi/settings.json`:
+Or project-local through `.pi/settings.json`:
 
 ```json
 {
@@ -64,15 +64,15 @@ pi install /absolute/path/to/pi-inline-slash-extension
 }
 ```
 
-### Глобальное подключение абсолютным путём
+### Global setup by absolute path
 
-Если нужен прямой путь без `pi install`, можно оставить extension в глобальном settings файле Pi:
+If you need a direct path without `pi install`, the extension can stay in the global Pi settings file:
 
 ```json
 ~/.pi/agent/settings.json
 ```
 
-Минимальный пример:
+Minimal example:
 
 ```json
 {
@@ -82,66 +82,66 @@ pi install /absolute/path/to/pi-inline-slash-extension
 }
 ```
 
-### Что считать успешным подключением
+### What counts as successful wiring
 
-- агент стартует без ошибки импорта `extensions/inline-slash.ts` или `.pi/extensions/inline-slash.ts`;
-- в UI-сессии после `/reload` работает сценарий `текст /gs` -> появляется `/gsd` autocomplete;
-- submit `'/home/spike/file.ts'` больше не идёт в `Unknown command`, а остаётся обычным user message.
+- the agent starts without an import error from `extensions/inline-slash.ts` or `.pi/extensions/inline-slash.ts`;
+- in a UI session after `/reload`, the scenario `text /gs` -> `/gsd` autocomplete works;
+- submit for `'/home/spike/file.ts'` no longer goes to `Unknown command` and instead stays a normal user message.
 
 <!-- verifier:readme/runtime-seams -->
 ## Runtime seams
 
-| Файл | Роль в runtime | Что важно для truth-first описания |
+| File | Runtime role | What matters for a truth-first description |
 | --- | --- | --- |
-| `extensions/inline-slash.ts` | package entrypoint | installable entrypoint для Pi package и глобального подключения |
-| `.pi/extensions/inline-slash.ts` | project-local shim | project-local auto-discovery seam; только реэкспорт package entrypoint |
-| `src/inline-slash/command-catalog.ts` | public catalog builder | принимает только public команды из `pi.getCommands()` с source `extension`, `prompt`, `skill`; использует `sourceInfo` как канонический provenance contract |
-| `src/inline-slash/editor.ts` | editor wrapper | оборачивает `onSubmit`, прокидывает delegate autocomplete provider и после обычного `handleInput` обновляет inline slash suggestions |
-| `src/inline-slash/provider.ts` | autocomplete provider | делегирует start-of-message slash в core provider; mid-line и second-line slash строит из локального каталога |
-| `src/inline-slash/classifier.ts` | token classifier и submit boundary | различает command, `skill:*` и absolute-path candidate по текущему токену вокруг курсора; после `trim()` смотрит только на leading token и решает `delegate-core-submit` vs `send-user-message` |
-| `src/inline-slash/editor.ts` | runtime submit shim | `createInlineSlashSubmitStrategy` для absolute path добавляет запись в history и вызывает `sendUserMessage`; всё остальное отдаёт в core submit |
-| `docs/UPSTREAM-SEAMS.md` | upstream seam request | фиксирует минимальный публичный API, который нужен, чтобы убрать оставшуюся зависимость от editor internals |
+| `extensions/inline-slash.ts` | package entrypoint | installable entrypoint for a Pi package and global wiring |
+| `.pi/extensions/inline-slash.ts` | project-local shim | project-local auto-discovery seam; only re-exports the package entrypoint |
+| `src/inline-slash/command-catalog.ts` | public catalog builder | accepts only public commands from `pi.getCommands()` with source `extension`, `prompt`, `skill`; uses `sourceInfo` as the canonical provenance contract |
+| `src/inline-slash/editor.ts` | editor wrapper | wraps `onSubmit`, forwards the delegate autocomplete provider, and refreshes inline slash suggestions after normal `handleInput` |
+| `src/inline-slash/provider.ts` | autocomplete provider | delegates start-of-message slash to the core provider; builds mid-line and second-line slash suggestions from the local catalog |
+| `src/inline-slash/classifier.ts` | token classifier and submit boundary | distinguishes command, `skill:*`, and absolute-path candidates around the current token; after `trim()` it reads only the leading token and decides `delegate-core-submit` vs `send-user-message` |
+| `src/inline-slash/editor.ts` | runtime submit shim | `createInlineSlashSubmitStrategy` adds a history entry and calls `sendUserMessage` for an absolute path; everything else goes to core submit |
+| `docs/UPSTREAM-SEAMS.md` | upstream seam request | records the minimal public API needed to remove the remaining dependency on editor internals |
 
-## Текущее состояние зависимости от Pi runtime
+## Current state of the Pi runtime dependency
 
-Стабильная часть решения держится на публичных seams:
+The stable part of the solution sits on public seams:
 
 - `ctx.ui.setEditorComponent(...)`;
 - `CustomEditor`;
 - `pi.getCommands()`;
 - `sendUserMessage(...)`;
-- публичные методы редактора `getText()`, `getLines()`, `getCursor()`, `setAutocompleteProvider()`.
+- public editor methods `getText()`, `getLines()`, `getCursor()`, `setAutocompleteProvider()`.
 
-Оставшаяся хрупкость изолирована в одном месте: `src/inline-slash/editor.ts` всё ещё форсирует refresh autocomplete через runtime методы редактора, которые не задокументированы как extension contract. Зависимость сокращена до минимального набора hooks и больше не использует `state` редактора.
+The remaining fragility is isolated in one place: `src/inline-slash/editor.ts` still forces autocomplete refresh through runtime editor methods that are not documented as an extension contract. The dependency has been reduced to the smallest useful hook set and no longer uses editor `state`.
 
 <!-- verifier:readme/verified-scenarios -->
 ## Verified scenarios
 
 ### Automated proof
 
-Автоматические проверки покрывают три слоя:
+Automated checks cover three layers:
 
 - `tests/inline-slash/provider.test.ts`
   - `inline-gsd`, `inline-skill`, `second-line-gsd`;
-  - suppression для absolute paths;
+  - suppression for absolute paths;
   - delegated first-line behavior;
-  - safe no-op на malformed bounds.
+  - safe no-op on malformed bounds.
 - `tests/inline-slash/submit-routing.test.ts`
-  - bypass для `/home/...` и `/tmp/...`;
-  - delegated submit для `/gsd auto`, `/skill:create-skill demo`, `/unknown`, обычного текста и пустого буфера;
-  - routing смотрит только на leading token после `trim()`.
+  - bypass for `/home/...` and `/tmp/...`;
+  - delegated submit for `/gsd auto`, `/skill:create-skill demo`, `/unknown`, plain text, and an empty buffer;
+  - routing reads only the leading token after `trim()`.
 - `tests/inline-slash/editor-smoke.test.ts`
-  - обычный typing cycle реально обновляет autocomplete на второй строке и mid-line;
-  - submit strategy вызывает `sendUserMessage` только для leading absolute path;
-  - smoke tests импортируют и `extensions/inline-slash.ts`, и `.pi/extensions/inline-slash.ts`, а затем проверяют wiring до `setEditorComponent`.
+  - the normal typing cycle really refreshes autocomplete on the second line and mid-line;
+  - the submit strategy calls `sendUserMessage` only for a leading absolute path;
+  - smoke tests import both `extensions/inline-slash.ts` and `.pi/extensions/inline-slash.ts`, then verify wiring through `setEditorComponent`.
 
-### Что именно считается доказанным
+### What is specifically proven
 
-- `текст /gs` -> локальный inline catalog предлагает `/gsd`;
-- `текст /skill:create` -> локальный inline catalog предлагает `/skill:create-skill`;
-- вторая строка `/gs` -> autocomplete работает без first-line ограничения;
-- `/home/spike/file.ts` и `/tmp/log.txt` при submit bypass'ят slash dispatch;
-- `/gsd auto`, `/skill:create-skill demo` и `/unknown` остаются delegated core submit path.
+- `text /gs` -> the local inline catalog suggests `/gsd`;
+- `text /skill:create` -> the local inline catalog suggests `/skill:create-skill`;
+- second line `/gs` -> autocomplete works without a first-line restriction;
+- `/home/spike/file.ts` and `/tmp/log.txt` bypass slash dispatch on submit;
+- `/gsd auto`, `/skill:create-skill demo`, and `/unknown` remain on the delegated core submit path.
 
 <!-- verifier:readme/verification-commands -->
 ## Verification surface
@@ -153,7 +153,7 @@ npm run verify:s03
 bash scripts/verify-s03.sh
 ```
 
-`verify:s03` - единый discoverable entrypoint для этой verification surface. Он композиционно прогоняет уже существующие proof surfaces и затем валидирует README markers.
+`verify:s03` is the single discoverable entrypoint for this verification surface. It composes the existing proof surfaces and then validates the README markers.
 
 ### Drill-down
 
@@ -164,56 +164,56 @@ npm run verify:s02
 bash scripts/verify-s02.sh
 ```
 
-- `verify:s01` - inline autocomplete, catalog и provider proof;
-- `verify:s02` - submit routing, editor smoke и `tsc --noEmit`;
-- `verify:s03` - orchestration поверх S01/S02 плюс README guard.
+- `verify:s01` -> inline autocomplete, catalog, and provider proof;
+- `verify:s02` -> submit routing, editor smoke, and `tsc --noEmit`;
+- `verify:s03` -> orchestration on top of S01/S02 plus the README guard.
 
-Automated proof и live runtime proof намеренно разделены: команды выше подтверждают кодовые инварианты, а ручной `/reload` checklist ниже подтверждает поведение в настоящем TUI.
+Automated proof and live runtime proof are intentionally separate: the commands above confirm code-level invariants, while the manual `/reload` checklist below confirms behavior in the real TUI.
 
 <!-- verifier:readme/manual-reload-checklist -->
 ## Manual `/reload` checklist
 
-После загрузки extension в Pi выполните `/reload` и проверьте следующие сценарии:
+After loading the extension in Pi, run `/reload` and verify the following scenarios:
 
-- `scenario:inline-gsd-mid-line` -> введите `текст /gs` и убедитесь, что появляется `/gsd` autocomplete.
-- `scenario:inline-skill-mid-line` -> введите `текст /skill:create` и убедитесь, что появляется `/skill:create-skill`.
-- `scenario:second-line-gsd` -> на второй строке введите `/gs` и убедитесь, что появляется `/gsd`.
-- `scenario:path-home-submit-bypass` -> введите `/home/spike/file.ts` и отправьте Enter; ожидается обычное user message поведение без `Unknown command`.
-- `scenario:path-tmp-submit-bypass` -> введите `/tmp/log.txt` и отправьте Enter; ожидается тот же bypass через обычное сообщение.
-- `scenario:delegate-gsd-submit` -> в первой строке введите `/gsd auto` и отправьте Enter; ожидается штатный slash command path.
-- `scenario:delegate-skill-submit` -> в первой строке введите `/skill:create-skill demo` и отправьте Enter; ожидается штатный skill submit path.
-- `scenario:delegate-unknown-submit` -> в первой строке введите `/unknown` и отправьте Enter; ожидается core unknown-command handling, а не обычное user message.
+- `scenario:inline-gsd-mid-line` -> type `text /gs` and confirm that `/gsd` autocomplete appears.
+- `scenario:inline-skill-mid-line` -> type `text /skill:create` and confirm that `/skill:create-skill` appears.
+- `scenario:second-line-gsd` -> on the second line type `/gs` and confirm that `/gsd` appears.
+- `scenario:path-home-submit-bypass` -> type `/home/spike/file.ts` and press Enter; expected result is normal user-message behavior without `Unknown command`.
+- `scenario:path-tmp-submit-bypass` -> type `/tmp/log.txt` and press Enter; expected result is the same bypass through a normal message.
+- `scenario:delegate-gsd-submit` -> on the first line type `/gsd auto` and press Enter; expected result is the normal slash command path.
+- `scenario:delegate-skill-submit` -> on the first line type `/skill:create-skill demo` and press Enter; expected result is the normal skill submit path.
+- `scenario:delegate-unknown-submit` -> on the first line type `/unknown` and press Enter; expected result is core unknown-command handling, not a normal user message.
 
 <!-- verifier:readme/proven-limitations -->
 ## Proven limitations and boundaries
 
-- inline catalog строится только из public `pi.getCommands()`; extension не синтезирует и не обещает полный built-in slash catalog;
-- локальный каталог принимает только public sources `extension`, `prompt`, `skill`;
-- `sourceInfo` используется как единственный канонический provenance contract;
-- first-line start-of-message slash autocomplete остаётся delegated core behavior, а не локальной заменой core provider;
-- submit bypass смотрит только на leading token после `trim()`: абсолютный путь в начале сообщения bypass'ится, остальные случаи идут в `delegate-core-submit`;
-- `/unknown` намеренно остаётся delegated core unknown-command handling;
-- extension требует `sendUserMessage` только для absolute path bypass; отсутствие этого API считается wiring failure и падает явно;
-- package installability не равна полной API-стабильности: inline refresh всё ещё зависит от ограниченного runtime seam редактора;
-- compatibility SLA описан ниже и сознательно уже, чем у чисто публичного extension API.
+- the inline catalog is built only from public `pi.getCommands()` output; the extension does not synthesize or promise a full built-in slash catalog;
+- the local catalog accepts only public sources `extension`, `prompt`, `skill`;
+- `sourceInfo` is used as the only canonical provenance contract;
+- first-line start-of-message slash autocomplete remains delegated core behavior instead of replacing the core provider locally;
+- submit bypass looks only at the leading token after `trim()`: an absolute path at the start of the message is bypassed, everything else goes to `delegate-core-submit`;
+- `/unknown` intentionally remains delegated core unknown-command handling;
+- the extension requires `sendUserMessage` only for absolute-path bypass; absence of this API is treated as a wiring failure and fails loudly;
+- package installability is not the same as full API stability: inline refresh still depends on a narrow editor runtime seam;
+- the compatibility SLA below is intentionally narrower than a purely public extension API.
 
 ## Compatibility SLA
 
-- рабочий и проверенный baseline: `@mariozechner/pi-coding-agent` `^0.65.0`;
-- extension обещает стабильность shipped scope только пока доступны публичные seams `setEditorComponent`, `CustomEditor`, `pi.getCommands()`, `sendUserMessage`, `getLines`, `getCursor`, `setAutocompleteProvider`;
-- при изменении runtime editor seam inline refresh может деградировать до отсутствия mid-line popup, но submit boundary для absolute paths и project/package wiring должны оставаться детектируемыми тестами;
-- любое расширение scope за пределы shipped behavior требует отдельной перепроверки против новых версий Pi.
+- working and verified baseline: `@mariozechner/pi-coding-agent` `^0.65.0`;
+- the extension promises shipped-scope stability only while the public seams `setEditorComponent`, `CustomEditor`, `pi.getCommands()`, `sendUserMessage`, `getLines`, `getCursor`, and `setAutocompleteProvider` remain available;
+- if the runtime editor seam changes, inline refresh may degrade into a missing mid-line popup, but the submit boundary for absolute paths and the project/package wiring should remain detectable by tests;
+- any scope expansion beyond the shipped behavior requires a separate re-check against newer Pi versions.
 
 <!-- verifier:readme/upstream-patch-plan -->
 ## Upstream patch plan
 
-Для shipped scope upstream patch в core по-прежнему не требуется. Текущая реализация и tests доказывают нужное поведение на extension layer.
+For the shipped scope, an upstream patch in core is still not required. The current implementation and tests prove the required behavior at the extension layer.
 
-Но для product-grade package нужен маленький upstream patch: публичный editor seam для `open/refresh/close autocomplete` и, отдельно, hook перед slash dispatch для submit boundary. Детали вынесены в `docs/UPSTREAM-SEAMS.md`.
+But a product-grade package still needs a small upstream patch: a public editor seam for `open/refresh/close autocomplete` and, separately, a hook before slash dispatch for the submit boundary. Details are in `docs/UPSTREAM-SEAMS.md`.
 
-Повод возвращаться к upstream patch появится хотя бы при одном из следующих требований:
+Reasons to revisit an upstream patch include at least one of the following requirements:
 
-- inline autocomplete для built-in команд, которых нет в public `pi.getCommands()`;
-- изменение core unknown-command handling для `/unknown`;
-- изменение штатного first-line slash behavior вместо делегирования в core;
-- отказ от оставшейся зависимости на runtime editor internals ради более надёжного package-level compatibility.
+- inline autocomplete for built-in commands that are not present in public `pi.getCommands()`;
+- changing core unknown-command handling for `/unknown`;
+- changing the standard first-line slash behavior instead of delegating to core;
+- removing the remaining dependency on runtime editor internals for more reliable package-level compatibility.

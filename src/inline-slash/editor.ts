@@ -55,7 +55,7 @@ interface InlineSlashAutocompleteHooks {
 type InlineSlashEditorConstructor = new (...args: any[]) => InlineSlashEditorBase;
 
 /**
- * Runtime submit strategy для absolute path bypass без изменения core slash поведения.
+ * Runtime submit strategy for absolute-path bypass without changing core slash behavior.
  */
 export function createInlineSlashSubmitStrategy(
   transport: InlineSlashSubmitTransport,
@@ -78,7 +78,7 @@ export function createInlineSlashSubmitStrategy(
 }
 
 /**
- * Установка submit shim поверх instance property, потому что base Editor держит own field `onSubmit`.
+ * Install a submit shim on top of the instance property because the base editor keeps `onSubmit` as an own field.
  */
 function installSubmitStrategy(
   editor: InlineSlashEditorBase,
@@ -111,7 +111,7 @@ function installSubmitStrategy(
 }
 
 /**
- * Извлечение только минимального набора private autocomplete hooks.
+ * Extract only the minimal set of private autocomplete hooks.
  */
 function getInlineSlashAutocompleteHooks(
   editor: InlineSlashEditorBase,
@@ -134,7 +134,7 @@ function getInlineSlashAutocompleteHooks(
 }
 
 /**
- * Снимок текущего текста и курсора только через публичные editor methods.
+ * Read the current text and cursor snapshot using only public editor methods.
  */
 export function readEditorSnapshot(editor: InlineSlashEditorBase): EditorSnapshot | null {
   if (typeof editor.getLines !== "function" || typeof editor.getCursor !== "function") {
@@ -154,7 +154,7 @@ export function readEditorSnapshot(editor: InlineSlashEditorBase): EditorSnapsho
 }
 
 /**
- * Проверка, что editor state реально изменился после handleInput.
+ * Check whether editor state actually changed after `handleInput`.
  */
 export function didEditorSnapshotChange(
   before: EditorSnapshot | null,
@@ -172,7 +172,7 @@ export function didEditorSnapshotChange(
 }
 
 /**
- * Обновление autocomplete после обычного редактирования для inline и second-line slash.
+ * Refresh autocomplete after regular editing for inline and second-line slash scenarios.
  */
 export function refreshInlineSlashAutocomplete(
   editor: InlineSlashEditorBase,
@@ -211,7 +211,7 @@ export function refreshInlineSlashAutocomplete(
 }
 
 /**
- * Фабрика класса editor wrapper, который расширяет runtime CustomEditor без форка core.
+ * Factory for an editor wrapper class that extends runtime `CustomEditor` without forking core.
  */
 export function createInlineSlashEditorClass<TBase extends InlineSlashEditorConstructor>(
   BaseEditor: TBase,
@@ -228,7 +228,7 @@ export function createInlineSlashEditorClass<TBase extends InlineSlashEditorCons
     }
 
     /**
-     * Перехват core autocomplete provider и обёртка его локальным inline provider.
+     * Intercept the core autocomplete provider and wrap it with the local inline provider.
      */
     override setAutocompleteProvider(provider: AutocompleteProviderLike): void {
       this.inlineSlashProvider = new InlineSlashProvider({
@@ -239,7 +239,7 @@ export function createInlineSlashEditorClass<TBase extends InlineSlashEditorCons
     }
 
     /**
-     * Обычный ввод + дополнительный refresh cycle для inline slash scenarios.
+     * Regular input plus an extra refresh cycle for inline slash scenarios.
      */
     override handleInput(data: string): void {
       const before = readEditorSnapshot(this);

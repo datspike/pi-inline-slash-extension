@@ -29,10 +29,10 @@ npm run "$VERIFY_LABEL"
 echo
 cat <<'CHECKLIST'
 [s02] live /reload checklist
-- scenario:path-home-submit-bypass -> после `/reload` введите `/home/spike/file.ts` и отправьте Enter; ожидается обычное user message поведение без `Unknown command`.
-- scenario:path-tmp-submit-bypass -> введите `/tmp/log.txt` и отправьте Enter; ожидается тот же bypass через обычное сообщение.
-- scenario:delegate-gsd-submit -> в первой строке введите `/gsd auto` и отправьте Enter; ожидается штатный slash command path.
-- scenario:delegate-skill-submit -> в первой строке введите `/skill:create-skill demo` и отправьте Enter; ожидается штатный skill submit path.
-- scenario:delegate-unknown-submit -> в первой строке введите `/unknown` и отправьте Enter; ожидается core unknown-command handling, а не обычное user message.
-- scenario:start-of-line-first-line-regression -> убедитесь, что start-of-line autocomplete/submit на первой строке для slash-команд не сломан после path bypass wiring.
+- scenario:path-home-submit-bypass -> after `/reload`, type `/home/spike/file.ts` and press Enter; expected result is normal user-message behavior without `Unknown command`.
+- scenario:path-tmp-submit-bypass -> type `/tmp/log.txt` and press Enter; expected result is the same bypass through a normal message.
+- scenario:delegate-gsd-submit -> on the first line type `/gsd auto` and press Enter; expected result is the normal slash command path.
+- scenario:delegate-skill-submit -> on the first line type `/skill:create-skill demo` and press Enter; expected result is the normal skill submit path.
+- scenario:delegate-unknown-submit -> on the first line type `/unknown` and press Enter; expected result is core unknown-command handling, not a normal user message.
+- scenario:start-of-line-first-line-regression -> confirm that first-line start-of-line autocomplete/submit for slash commands is still intact after the path-bypass wiring.
 CHECKLIST

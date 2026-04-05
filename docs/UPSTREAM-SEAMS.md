@@ -1,10 +1,10 @@
 # upstream editor seam request
 
-## Зачем
+## Why
 
-Текущее расширение решает shipped-задачу без форка core, но для inline slash autocomplete всё ещё вынуждено обращаться к части runtime seam редактора, которая не описана как публичный extension contract.
+The current extension solves the shipped scope without forking core, but inline slash autocomplete still has to touch part of the editor runtime seam that is not documented as a public extension contract.
 
-## Что уже держится на публичном API
+## What already sits on public API
 
 - `ctx.ui.setEditorComponent(...)`
 - `CustomEditor`
@@ -15,44 +15,44 @@
 - `Editor.getCursor()`
 - `Editor.setAutocompleteProvider(...)`
 
-## Что сейчас остаётся серой зоной
+## What is still a gray area
 
-- форсированный запуск autocomplete после mid-line ввода;
-- обновление уже открытого autocomplete popup вне start-of-message slash flow;
-- submit interception до того, как slash dispatcher решит, что `/home/...` - это команда.
+- forced autocomplete triggering after mid-line input;
+- refreshing an already open autocomplete popup outside the start-of-message slash flow;
+- submit interception before the slash dispatcher decides that `/home/...` is a command.
 
-## Минимальный публичный seam
+## Minimal public seam
 
 ### editor autocomplete control
 
-Нужен публичный контракт уровня `CustomEditor` или `EditorComponent`:
+A public contract is needed at the `CustomEditor` or `EditorComponent` level:
 
 - `refreshAutocomplete(): void`
 - `openAutocomplete(): void`
 - `closeAutocomplete(): void`
 - `isAutocompleteOpen(): boolean`
 
-Этого достаточно, чтобы extension не трогал private методы редактора.
+That is enough for the extension to stop touching private editor methods.
 
 ### submit classification hook
 
-Нужен extension hook до slash dispatch:
+An extension hook is needed before slash dispatch:
 
 - `before_submit_dispatch(text) -> { route: "default" | "send-user-message" }`
 
-или более узкий editor-level callback:
+or a narrower editor-level callback:
 
 - `transformSubmit(text) -> { kind: "delegate" | "user-message", text: string }`
 
-## Что даст такой seam
+## What this seam would unlock
 
-- расширение перестанет зависеть от private editor internals;
-- inline slash станет переносимым между версиями Pi;
-- можно будет расширить каталог до built-ins только после отдельного публичного API на built-in commands;
-- логика package-level extensions станет предсказуемой для всей P-экосистемы.
+- the extension would stop depending on private editor internals;
+- inline slash would become portable across Pi versions;
+- the catalog could be extended to built-ins only after a separate public API for built-in commands exists;
+- package-level extension behavior would become predictable across the Pi ecosystem.
 
-## Что не просим в этом patch
+## What this patch is not asking for
 
-- built-in slash catalog через `pi.getCommands()`;
-- изменение unknown-command semantics;
-- переписывание текущего slash UX целиком.
+- built-in slash catalog via `pi.getCommands()`;
+- changes to unknown-command semantics;
+- a full rewrite of the current slash UX.

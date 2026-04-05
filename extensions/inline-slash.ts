@@ -8,7 +8,7 @@ import {
 } from "../src/inline-slash/editor.js";
 
 /**
- * Package entrypoint для inline slash editor wrapper.
+ * Package entrypoint for the inline slash editor wrapper.
  */
 export default function inlineSlashExtension(api: ExtensionAPI): void {
   api.on("session_start", (_event, ctx) => {

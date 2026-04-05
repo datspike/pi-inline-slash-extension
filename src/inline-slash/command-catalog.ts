@@ -10,17 +10,17 @@ const SUPPORTED_SOURCES = new Set<PublicSlashCommandSource>(["extension", "promp
 const SKILL_PREFIX = "skill:";
 
 export const PUBLIC_COMMAND_CATALOG_NOTE =
-  "Каталог строится только из public `pi.getCommands()` и сознательно не притворяется полным built-in slash catalog.";
+  "The catalog is built only from public `pi.getCommands()` output and intentionally does not pretend to be a full built-in slash catalog.";
 
 /**
- * Проверка, что значение является непустой строкой.
+ * Check whether the value is a non-empty string.
  */
 function isNonEmptyString(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
 /**
- * Проверка, что raw value соответствует реальному `SlashCommandInfo` из Pi.
+ * Check whether the raw value matches a real Pi `SlashCommandInfo` shape.
  */
 function isSlashCommandInfo(value: unknown): value is SlashCommandInfo {
   if (!value || typeof value !== "object") {
@@ -40,14 +40,14 @@ function isSlashCommandInfo(value: unknown): value is SlashCommandInfo {
 }
 
 /**
- * Нормализация имени команды из public API к локальному alias без ведущего slash.
+ * Normalize a public command name into a local alias without the leading slash.
  */
 function normalizeCommandName(name: string): string {
   return name.trim().replace(/^\/+/, "");
 }
 
 /**
- * Построение списка match alias для каталога autocomplete.
+ * Build the set of match aliases used by the autocomplete catalog.
  */
 function buildMatchKeys(name: string, source: PublicSlashCommandSource): string[] {
   const matchKeys = new Set<string>([name.toLowerCase()]);
@@ -64,7 +64,7 @@ function buildMatchKeys(name: string, source: PublicSlashCommandSource): string[
 }
 
 /**
- * Преобразование сырых данных `pi.getCommands()` в локальную запись каталога.
+ * Convert raw `pi.getCommands()` data into a local catalog entry.
  */
 function toCatalogEntry(rawCommand: unknown): InlineSlashCatalogEntry | null {
   if (!isSlashCommandInfo(rawCommand)) {
@@ -98,7 +98,7 @@ function toCatalogEntry(rawCommand: unknown): InlineSlashCatalogEntry | null {
 }
 
 /**
- * Сборка truth-first каталога только из public extension/prompt/skill команд.
+ * Build a truth-first catalog only from public extension/prompt/skill commands.
  */
 export function buildCommandCatalog(commands: readonly unknown[]): InlineSlashCatalog {
   const entries: InlineSlashCatalogEntry[] = [];

@@ -29,10 +29,10 @@ npm run "$VERIFY_LABEL"
 echo
 cat <<'CHECKLIST'
 [s01] live /reload checklist
-- scenario:inline-gsd-mid-line -> введите `текст /gs` и убедитесь, что появляется `/gsd` autocomplete.
-- scenario:inline-skill-mid-line -> введите `текст /skill:create` и убедитесь, что появляется `/skill:create-skill`.
-- scenario:second-line-gsd -> на второй строке введите `/gs` и убедитесь, что появляется `/gsd`.
-- scenario:start-of-line-regression-gsd -> в первой строке введите `/gsd auto` и убедитесь, что стандартный start-of-line сценарий не сломан.
-- scenario:start-of-line-regression-skill -> в первой строке введите `/skill:create-skill` и убедитесь, что upstream slash path остаётся рабочим.
-- scenario:s02-boundary -> submit-time absolute path `/home/...` намеренно не заявляется здесь и остаётся предметом S02.
+- scenario:inline-gsd-mid-line -> type `text /gs` and confirm that `/gsd` autocomplete appears.
+- scenario:inline-skill-mid-line -> type `text /skill:create` and confirm that `/skill:create-skill` appears.
+- scenario:second-line-gsd -> on the second line type `/gs` and confirm that `/gsd` appears.
+- scenario:start-of-line-regression-gsd -> on the first line type `/gsd auto` and confirm the standard start-of-line scenario is still intact.
+- scenario:start-of-line-regression-skill -> on the first line type `/skill:create-skill` and confirm the upstream slash path still works.
+- scenario:s02-boundary -> submit-time absolute path `/home/...` is intentionally not claimed here and remains covered by S02.
 CHECKLIST

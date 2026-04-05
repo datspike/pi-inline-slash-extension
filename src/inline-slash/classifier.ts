@@ -12,14 +12,14 @@ const COMMAND_TOKEN_PATTERN = /^\/[a-z][a-z0-9-]*$/i;
 const WHITESPACE_PATTERN = /\s/;
 
 /**
- * Проверка, что символ является пробельным разделителем токенов.
+ * Check whether a character is a whitespace token separator.
  */
 function isWhitespaceCharacter(character: string): boolean {
   return WHITESPACE_PATTERN.test(character);
 }
 
 /**
- * Возврат стандартизированного ответа, когда slash-токен не распознан.
+ * Return the standard no-match response when a slash token is not recognized.
  */
 function createNoMatch(reason: SlashNoMatch["reason"]): SlashNoMatch {
   return {
@@ -31,7 +31,7 @@ function createNoMatch(reason: SlashNoMatch["reason"]): SlashNoMatch {
 }
 
 /**
- * Выбор опорного индекса символа рядом с курсором для поиска текущего токена.
+ * Pick the anchor character index near the cursor for current-token lookup.
  */
 function getProbeIndex(text: string, cursor: number): number | null {
   if (cursor === text.length) {
@@ -50,7 +50,7 @@ function getProbeIndex(text: string, cursor: number): number | null {
 }
 
 /**
- * Поиск левой границы токена без выхода за текущий пробельный сегмент.
+ * Find the left token boundary without leaving the current whitespace-delimited segment.
  */
 function findTokenStart(text: string, probeIndex: number): number {
   let index = probeIndex;
@@ -63,7 +63,7 @@ function findTokenStart(text: string, probeIndex: number): number {
 }
 
 /**
- * Поиск правой границы токена без выхода за текущий пробельный сегмент.
+ * Find the right token boundary without leaving the current whitespace-delimited segment.
  */
 function findTokenEnd(text: string, probeIndex: number): number {
   let index = probeIndex;
@@ -76,7 +76,7 @@ function findTokenEnd(text: string, probeIndex: number): number {
 }
 
 /**
- * Классификация уже выделенного slash-токена по типу кандидата.
+ * Classify an already isolated slash token by candidate kind.
  */
 function classifyTokenKind(token: string): SlashCandidateKind | null {
   if (token.slice(1).includes("/")) {
@@ -95,7 +95,7 @@ function classifyTokenKind(token: string): SlashCandidateKind | null {
 }
 
 /**
- * Создание ответа для команды, skill-токена или absolute path candidate.
+ * Build the analysis result for a command, skill token, or absolute-path candidate.
  */
 function createTokenResult(
   token: string,
@@ -129,7 +129,7 @@ function createTokenResult(
 }
 
 /**
- * Анализ slash-токена вокруг курсора без обращения к runtime Pi.
+ * Analyze the slash token around the cursor without touching Pi runtime state.
  */
 export function analyzeSlashToken(text: string, cursor: number): SlashTokenAnalysis {
   if (text.length === 0) {
@@ -173,14 +173,14 @@ export function analyzeSlashToken(text: string, cursor: number): SlashTokenAnaly
 }
 
 /**
- * Нормализация submit-текста в том же виде, который дальше увидит core path.
+ * Normalize submit text into the same shape that core submit will see.
  */
 export function normalizeSubmitText(text: string): string {
   return text.trim();
 }
 
 /**
- * Чтение только ведущего токена после trim без обхода всего буфера.
+ * Read only the leading token after trim without scanning the whole buffer.
  */
 function getLeadingToken(text: string): string {
   let end = 0;
@@ -193,7 +193,7 @@ function getLeadingToken(text: string): string {
 }
 
 /**
- * Выбор submit route для path-vs-command boundary без runtime side effects.
+ * Select the submit route for the path-vs-command boundary without runtime side effects.
  */
 export function resolveSubmitRouting(text: string): SubmitRoutingResult {
   const preparedText = normalizeSubmitText(text);

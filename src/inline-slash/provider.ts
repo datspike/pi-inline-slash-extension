@@ -17,21 +17,21 @@ export interface InlineSlashProviderOptions {
 }
 
 /**
- * Соединение массива строк редактора в единый текстовый буфер.
+ * Join editor lines into a single text buffer.
  */
 function joinLines(lines: readonly string[]): string {
   return lines.join("\n");
 }
 
 /**
- * Проверка, что bounds не выходят за пределы текущего текста.
+ * Check that token bounds stay within the current text length.
  */
 function isValidBounds(bounds: SlashTokenBounds, textLength: number): boolean {
   return bounds.start >= 0 && bounds.start <= bounds.end && bounds.end <= textLength;
 }
 
 /**
- * Перевод позиции курсора line/col в абсолютный offset буфера.
+ * Convert a line/column cursor position into an absolute buffer offset.
  */
 function cursorToOffset(lines: readonly string[], cursorLine: number, cursorCol: number): number | null {
   if (cursorLine < 0 || cursorCol < 0) {
@@ -60,7 +60,7 @@ function cursorToOffset(lines: readonly string[], cursorLine: number, cursorCol:
 }
 
 /**
- * Перевод абсолютного offset обратно в line/col координаты.
+ * Convert an absolute offset back into line/column coordinates.
  */
 function offsetToCursor(text: string, offset: number): { cursorLine: number; cursorCol: number } {
   const boundedOffset = Math.max(0, Math.min(offset, text.length));
@@ -73,14 +73,14 @@ function offsetToCursor(text: string, offset: number): { cursorLine: number; cur
 }
 
 /**
- * Разбиение буфера обратно в строки редактора.
+ * Split the buffer back into editor lines.
  */
 function splitLines(text: string): string[] {
   return text.split("\n");
 }
 
 /**
- * Проверка, что курсор находится в делегируемом core slash-сценарии.
+ * Check whether the cursor is in a core-delegated start-of-message slash scenario.
  */
 export function isDelegatedStartOfMessage(
   lines: readonly string[],
@@ -98,7 +98,7 @@ export function isDelegatedStartOfMessage(
 }
 
 /**
- * Нормализация текста вставки так, чтобы ведущий slash никогда не терялся.
+ * Normalize inserted text so the leading slash is never lost.
  */
 function normalizeInsertText(item: AutocompleteItemLike): string {
   const rawValue = item.value.trim();
@@ -111,7 +111,7 @@ function normalizeInsertText(item: AutocompleteItemLike): string {
 }
 
 /**
- * Фильтрация каталога по префиксу текущего slash-токена.
+ * Filter the catalog by the current slash-token prefix.
  */
 function filterCatalog(catalog: InlineSlashCatalog, query: string): AutocompleteItemLike[] {
   const normalizedQuery = query.toLowerCase();
@@ -126,7 +126,7 @@ function filterCatalog(catalog: InlineSlashCatalog, query: string): Autocomplete
 }
 
 /**
- * Pure provider для inline и second-line slash/skill autocomplete.
+ * Pure provider for inline and second-line slash/skill autocomplete.
  */
 export class InlineSlashProvider implements AutocompleteProviderLike {
   private readonly catalog: InlineSlashCatalog;
@@ -140,7 +140,7 @@ export class InlineSlashProvider implements AutocompleteProviderLike {
   }
 
   /**
-   * Построение suggestions для inline slash-токена или делегирование core provider.
+   * Build suggestions for an inline slash token or delegate to the core provider.
    */
   getSuggestions(
     lines: string[],
@@ -178,7 +178,7 @@ export class InlineSlashProvider implements AutocompleteProviderLike {
   }
 
   /**
-   * Применение completion только к текущему токену без порчи соседнего текста.
+   * Apply a completion only to the current token without damaging neighboring text.
    */
   applyCompletion(
     lines: string[],

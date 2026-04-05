@@ -21,7 +21,7 @@ function sourceInfo(scope: "user" | "project" | "temporary", path: string) {
 }
 
 /**
- * Создание локального каталога для provider tests.
+ * Build the local catalog used by provider tests.
  */
 function createCatalog() {
   return buildCommandCatalog([
@@ -53,7 +53,7 @@ function createCatalog() {
 }
 
 /**
- * Создание delegate provider с шпионами на оба метода.
+ * Build a delegate provider with spies on both methods.
  */
 function createDelegate(result?: AutocompleteSuggestions | null): AutocompleteProviderLike & {
   getSuggestionsSpy: ReturnType<typeof vi.fn>;
@@ -90,14 +90,14 @@ function createDelegate(result?: AutocompleteSuggestions | null): AutocompletePr
 }
 
 describe("InlineSlashProvider.getSuggestions", () => {
-  test("inline-gsd: предлагает /gsd внутри строки и не трогает delegate", () => {
-    /** inline-gsd: mid-line slash command должен работать без core provider. */
+  test("inline-gsd: suggests /gsd inside a line and does not touch the delegate", () => {
+    /** inline-gsd: a mid-line slash command must work without the core provider. */
     const delegate = createDelegate({
       items: [{ value: "settings", label: "settings" }],
       prefix: "/gs",
     });
     const provider = new InlineSlashProvider({ catalog: createCatalog(), delegate });
-    const line = "Сначала проверь /gs";
+    const line = "First check /gs";
 
     expect(provider.getSuggestions([line], 0, line.length)).toEqual({
       items: [{ value: "/gsd", label: "/gsd", description: "GSD helper" }],
@@ -106,10 +106,10 @@ describe("InlineSlashProvider.getSuggestions", () => {
     expect(delegate.getSuggestionsSpy).not.toHaveBeenCalled();
   });
 
-  test("inline-skill: предлагает /skill:create-skill внутри строки", () => {
-    /** inline-skill: skill token фильтруется по полному `skill:*` alias. */
+  test("inline-skill: suggests /skill:create-skill inside a line", () => {
+    /** inline-skill: the skill token is filtered by the full `skill:*` alias. */
     const provider = new InlineSlashProvider({ catalog: createCatalog() });
-    const line = "Нужно включить /skill:create";
+    const line = "Need to enable /skill:create";
 
     expect(provider.getSuggestions([line], 0, line.length)).toEqual({
       items: [
@@ -123,10 +123,10 @@ describe("InlineSlashProvider.getSuggestions", () => {
     });
   });
 
-  test("inline-skill-short-alias: short /commit-list матчит canonical skill entry", () => {
-    /** inline-skill-short-alias: short skill alias должен находить canonical `/skill:*` completion. */
+  test("inline-skill-short-alias: short /commit-list matches the canonical skill entry", () => {
+    /** inline-skill-short-alias: the short skill alias must resolve to canonical `/skill:*` completion. */
     const provider = new InlineSlashProvider({ catalog: createCatalog() });
-    const line = "Нужно включить /commit";
+    const line = "Need to enable /commit";
 
     expect(provider.getSuggestions([line], 0, line.length)).toEqual({
       items: [
@@ -140,14 +140,14 @@ describe("InlineSlashProvider.getSuggestions", () => {
     });
   });
 
-  test("second-line-gsd: предлагает /gsd на второй строке без delegate path", () => {
-    /** second-line-gsd: первая строка не должна быть обязательным условием. */
+  test("second-line-gsd: suggests /gsd on the second line without the delegate path", () => {
+    /** second-line-gsd: the first line must not be a required condition. */
     const delegate = createDelegate({
       items: [{ value: "settings", label: "settings" }],
       prefix: "/gs",
     });
     const provider = new InlineSlashProvider({ catalog: createCatalog(), delegate });
-    const lines = ["Первая строка", "вторая /gs"];
+    const lines = ["First line", "second /gs"];
 
     expect(provider.getSuggestions(lines, 1, lines[1].length)).toEqual({
       items: [{ value: "/gsd", label: "/gsd", description: "GSD helper" }],
@@ -156,22 +156,22 @@ describe("InlineSlashProvider.getSuggestions", () => {
     expect(delegate.getSuggestionsSpy).not.toHaveBeenCalled();
   });
 
-  test("zero-match: возвращает null для неизвестного inline prefix", () => {
-    /** zero-match: отсутствие совпадений не должно давать ложную подсказку. */
+  test("zero-match: returns null for an unknown inline prefix", () => {
+    /** zero-match: missing matches must not produce a false suggestion. */
     const provider = new InlineSlashProvider({ catalog: createCatalog() });
 
-    expect(provider.getSuggestions(["текст /zzz"], 0, "текст /zzz".length)).toBeNull();
+    expect(provider.getSuggestions(["text /zzz"], 0, "text /zzz".length)).toBeNull();
   });
 
-  test("absolute-path-suppression: подавляет подсказки для absolute path candidate", () => {
-    /** absolute-path-suppression: /home/... не должен становиться slash command. */
+  test("absolute-path-suppression: suppresses suggestions for an absolute-path candidate", () => {
+    /** absolute-path-suppression: /home/... must not become a slash command. */
     const provider = new InlineSlashProvider({ catalog: createCatalog() });
 
     expect(provider.getSuggestions(["/home/spike/file.ts"], 0, "/home/spike/file.ts".length)).toBeNull();
   });
 
-  test("start-of-line-delegate: на первой строке делегирует в core provider", () => {
-    /** start-of-line-delegate: корректный upstream path остаётся у core autocomplete. */
+  test("start-of-line-delegate: delegates to the core provider on the first line", () => {
+    /** start-of-line-delegate: the valid upstream path must stay with core autocomplete. */
     const delegateResult = {
       items: [{ value: "settings", label: "settings", description: "Open settings" }],
       prefix: "/se",
@@ -183,8 +183,8 @@ describe("InlineSlashProvider.getSuggestions", () => {
     expect(delegate.getSuggestionsSpy).toHaveBeenCalledWith(["/se"], 0, 3, {});
   });
 
-  test("start-of-line-delegate-options: прокидывает options в core provider", () => {
-    /** start-of-line-delegate-options: upstream provider должен получать force/signal без потерь. */
+  test("start-of-line-delegate-options: forwards options to the core provider", () => {
+    /** start-of-line-delegate-options: the upstream provider must receive force/signal unchanged. */
     const delegateResult = {
       items: [{ value: "settings", label: "settings", description: "Open settings" }],
       prefix: "/se",
@@ -197,15 +197,15 @@ describe("InlineSlashProvider.getSuggestions", () => {
     expect(delegate.getSuggestionsSpy).toHaveBeenCalledWith(["/se"], 0, 3, options);
   });
 
-  test("missing-delegate-start-of-line: возвращает null, если делегировать некуда", () => {
-    /** missing-delegate-start-of-line: отсутствие delegate не должно ронять provider. */
+  test("missing-delegate-start-of-line: returns null when there is nothing to delegate to", () => {
+    /** missing-delegate-start-of-line: a missing delegate must not crash the provider. */
     const provider = new InlineSlashProvider({ catalog: createCatalog() });
 
     expect(provider.getSuggestions(["/gs"], 0, 3)).toBeNull();
   });
 
-  test("malformed-bounds: игнорирует битые token bounds от classifier seam", () => {
-    /** malformed-bounds: некорректный replacement span не должен порождать suggestions. */
+  test("malformed-bounds: ignores broken token bounds from the classifier seam", () => {
+    /** malformed-bounds: an invalid replacement span must not produce suggestions. */
     const malformedAnalyze = vi.fn(
       (): SlashTokenAnalysis => ({
         status: "match",
@@ -222,15 +222,15 @@ describe("InlineSlashProvider.getSuggestions", () => {
       analyzeToken: malformedAnalyze,
     });
 
-    expect(provider.getSuggestions(["текст /gs"], 0, "текст /gs".length)).toBeNull();
+    expect(provider.getSuggestions(["text /gs"], 0, "text /gs".length)).toBeNull();
   });
 });
 
 describe("InlineSlashProvider.applyCompletion", () => {
-  test("inline-apply-gsd: заменяет только текущий token и сохраняет ведущий slash", () => {
-    /** inline-apply-gsd: соседний текст до и после токена должен остаться нетронутым. */
+  test("inline-apply-gsd: replaces only the current token and preserves the leading slash", () => {
+    /** inline-apply-gsd: neighboring text before and after the token must stay untouched. */
     const provider = new InlineSlashProvider({ catalog: createCatalog() });
-    const line = "Сначала /gs потом";
+    const line = "First /gs then";
 
     expect(
       provider.applyCompletion(
@@ -241,16 +241,16 @@ describe("InlineSlashProvider.applyCompletion", () => {
         "/gs",
       ),
     ).toEqual({
-      lines: ["Сначала /gsd потом"],
+      lines: ["First /gsd then"],
       cursorLine: 0,
-      cursorCol: "Сначала /gsd".length,
+      cursorCol: "First /gsd".length,
     });
   });
 
-  test("inline-apply-skill: добавляет completion в конце буфера и не теряет slash", () => {
-    /** inline-apply-skill: completion в конце строки получает хвостовой пробел для аргументов. */
+  test("inline-apply-skill: appends completion at buffer end and preserves the slash", () => {
+    /** inline-apply-skill: a completion at line end must get a trailing space for arguments. */
     const provider = new InlineSlashProvider({ catalog: createCatalog() });
-    const line = "Включи /skill:create";
+    const line = "Enable /skill:create";
 
     expect(
       provider.applyCompletion(
@@ -261,14 +261,14 @@ describe("InlineSlashProvider.applyCompletion", () => {
         "/skill:create",
       ),
     ).toEqual({
-      lines: ["Включи /skill:create-skill "],
+      lines: ["Enable /skill:create-skill "],
       cursorLine: 0,
-      cursorCol: "Включи /skill:create-skill ".length,
+      cursorCol: "Enable /skill:create-skill ".length,
     });
   });
 
-  test("start-of-line-apply-delegate: сохраняет delegate path для первого-line core scenario", () => {
-    /** start-of-line-apply-delegate: start-of-message apply остаётся у upstream provider. */
+  test("start-of-line-apply-delegate: preserves the delegate path for the first-line core scenario", () => {
+    /** start-of-line-apply-delegate: start-of-message apply must remain with the upstream provider. */
     const delegate = createDelegate({
       items: [{ value: "settings", label: "settings" }],
       prefix: "/se",
@@ -297,8 +297,8 @@ describe("InlineSlashProvider.applyCompletion", () => {
     );
   });
 
-  test("malformed-bounds-no-op: при битом replacement span не портит текст", () => {
-    /** malformed-bounds-no-op: ошибочный seam должен приводить к безопасному no-op. */
+  test("malformed-bounds-no-op: does not damage text when the replacement span is broken", () => {
+    /** malformed-bounds-no-op: a broken seam must result in a safe no-op. */
     const malformedAnalyze = vi.fn(
       (): SlashTokenAnalysis => ({
         status: "match",
@@ -317,16 +317,16 @@ describe("InlineSlashProvider.applyCompletion", () => {
 
     expect(
       provider.applyCompletion(
-        ["текст /gs"],
+        ["text /gs"],
         0,
-        "текст /gs".length,
+        "text /gs".length,
         { value: "/gsd", label: "/gsd" },
         "/gs",
       ),
     ).toEqual({
-      lines: ["текст /gs"],
+      lines: ["text /gs"],
       cursorLine: 0,
-      cursorCol: "текст /gs".length,
+      cursorCol: "text /gs".length,
     });
   });
 });

@@ -32,7 +32,7 @@ require_fixed_pattern() {
   local description="$2"
 
   if ! rg -F -q -- "$pattern" README.md; then
-    fail "README.md: отсутствует ${description} (${pattern})"
+    fail "README.md: missing ${description} (${pattern})"
   fi
 }
 
@@ -41,7 +41,7 @@ forbid_pattern() {
   local description="$2"
 
   if rg -q -- "$pattern" README.md; then
-    fail "README.md: найден устаревший ${description} (${pattern})"
+    fail "README.md: found outdated ${description} (${pattern})"
   fi
 }
 
@@ -63,9 +63,9 @@ if ! rg -q '"verify:s03"' package.json; then
   fail "missing package.json script 'verify:s03'"
 fi
 
-forbid_pattern "Гипотеза реализации" "speculative section"
-forbid_pattern "Вариант A" "speculative option A"
-forbid_pattern "Вариант B" "speculative option B"
+forbid_pattern "Implementation hypothesis" "speculative section"
+forbid_pattern "Option A" "speculative option A"
+forbid_pattern "Option B" "speculative option B"
 forbid_pattern '@gsd/pi-coding-agent' "legacy gsd package mention"
 forbid_pattern '`.gsd/extensions/inline-slash.ts`' "legacy gsd entrypoint mention"
 
@@ -121,12 +121,12 @@ echo "[s03] drill-down surfaces: npm run ${INLINE_AUTOCOMPLETE_LABEL} | bash scr
 echo
 cat <<'CHECKLIST'
 [s03] live /reload checklist
-- scenario:inline-gsd-mid-line -> введите `текст /gs` и убедитесь, что появляется `/gsd` autocomplete.
-- scenario:inline-skill-mid-line -> введите `текст /skill:create` и убедитесь, что появляется `/skill:create-skill`.
-- scenario:second-line-gsd -> на второй строке введите `/gs` и убедитесь, что появляется `/gsd`.
-- scenario:path-home-submit-bypass -> введите `/home/spike/file.ts` и отправьте Enter; ожидается обычное user message поведение без `Unknown command`.
-- scenario:path-tmp-submit-bypass -> введите `/tmp/log.txt` и отправьте Enter; ожидается тот же bypass через обычное сообщение.
-- scenario:delegate-gsd-submit -> в первой строке введите `/gsd auto` и отправьте Enter; ожидается штатный slash command path.
-- scenario:delegate-skill-submit -> в первой строке введите `/skill:create-skill demo` и отправьте Enter; ожидается штатный skill submit path.
-- scenario:delegate-unknown-submit -> в первой строке введите `/unknown` и отправьте Enter; ожидается core unknown-command handling, а не обычное user message.
+- scenario:inline-gsd-mid-line -> type `text /gs` and confirm that `/gsd` autocomplete appears.
+- scenario:inline-skill-mid-line -> type `text /skill:create` and confirm that `/skill:create-skill` appears.
+- scenario:second-line-gsd -> on the second line type `/gs` and confirm that `/gsd` appears.
+- scenario:path-home-submit-bypass -> type `/home/spike/file.ts` and press Enter; expected result is normal user-message behavior without `Unknown command`.
+- scenario:path-tmp-submit-bypass -> type `/tmp/log.txt` and press Enter; expected result is the same bypass through a normal message.
+- scenario:delegate-gsd-submit -> on the first line type `/gsd auto` and press Enter; expected result is the normal slash command path.
+- scenario:delegate-skill-submit -> on the first line type `/skill:create-skill demo` and press Enter; expected result is the normal skill submit path.
+- scenario:delegate-unknown-submit -> on the first line type `/unknown` and press Enter; expected result is core unknown-command handling, not a normal user message.
 CHECKLIST

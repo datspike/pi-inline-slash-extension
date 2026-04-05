@@ -1,4 +1,4 @@
-# pi-inline-slash-extension
+# @datspike/pi-inline-slash-extension
 
 Installable Pi extension that makes slash autocomplete work where people actually type: inside normal text and on the second line. It also stops leading absolute paths such as `/home/spike/file.ts` from being misrouted as slash commands.
 
@@ -40,7 +40,7 @@ What is actually shipped:
 ### 1. Install as a Pi package
 
 ```bash
-pi install /absolute/path/to/pi-inline-slash-extension
+pi install npm:@datspike/pi-inline-slash-extension
 ```
 
 ### 2. Reload Pi
@@ -98,10 +98,10 @@ Core is not patched. More detail: `docs/ARCHITECTURE.md`.
 The package entrypoint is `extensions/inline-slash.ts`, and `package.json` declares the `pi.extensions` manifest.
 
 ```bash
-pi install /absolute/path/to/pi-inline-slash-extension
+pi install npm:@datspike/pi-inline-slash-extension
 ```
 
-This is the recommended setup for normal use.
+This is the recommended setup for normal use after npm publication.
 
 ### Direct path wiring
 

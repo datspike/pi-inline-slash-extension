@@ -1,5 +1,5 @@
 {
-  "name": "pi-inline-slash-extension",
+  "name": "@datspike/pi-inline-slash-extension",
   "version": "0.1.0",
   "description": "Pi extension that adds inline slash autocomplete and absolute-path submit bypass without forking core.",
   "private": false,
@@ -23,6 +23,9 @@
   ],
   "engines": {
     "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "pi": {
     "extensions": ["./extensions/inline-slash.ts"]

@@ -1,8 +1,8 @@
 # pi-inline-slash-extension
 
-Pi extension that makes slash autocomplete usable inside normal text and prevents leading absolute paths from being mistaken for commands.
+Installable Pi extension that makes slash autocomplete work where people actually type: inside normal text and on the second line. It also stops leading absolute paths such as `/home/spike/file.ts` from being misrouted as slash commands.
 
-This repository ships an installable extension package with a narrow, verified scope. If you opened the repo from search or GitHub, the short version is simple: install it, reload Pi, and you get inline slash suggestions mid-line and on the second line, plus safe submit behavior for paths like `/home/spike/file.ts`.
+If you found this repo from GitHub search, the practical summary is simple: install it, run `/reload`, and you get better inline slash UX without forking Pi core.
 
 ## Why this exists
 
@@ -11,6 +11,19 @@ Pi already handles slash commands well at the start of the first line. This exte
 - inline slash autocomplete inside regular text;
 - slash autocomplete on the second line;
 - submit bypass for a leading absolute path such as `/tmp/log.txt`.
+
+## Demo
+
+```text
+Before:
+text /gs             -> no useful inline slash completion
+/home/spike/file.ts  -> can be treated as a slash command
+
+After:
+text /gs             -> suggests /gsd
+text /skill:create   -> suggests /skill:create-skill
+/home/spike/file.ts  -> sent as a normal user message
+```
 
 <!-- verifier:readme/shipped-scope -->
 ## Features
@@ -24,23 +37,25 @@ What is actually shipped:
 
 ## Quick start
 
-### Install as a Pi package
+### 1. Install as a Pi package
 
 ```bash
 pi install /absolute/path/to/pi-inline-slash-extension
 ```
 
-### Reload Pi
+### 2. Reload Pi
 
 ```text
 /reload
 ```
 
-### Try these scenarios
+### 3. Try these scenarios
 
 - type `text /gs` -> expect `/gsd` autocomplete;
 - type `text /skill:create` -> expect `/skill:create-skill` autocomplete;
 - type `/home/spike/file.ts` and press Enter -> expect a normal user message, not command routing.
+
+If those three checks pass, the extension is wired correctly.
 
 ## At a glance
 
@@ -51,6 +66,16 @@ pi install /absolute/path/to/pi-inline-slash-extension
 | Leading absolute path submit bypass | supported |
 | Override of core first-line slash behavior | not supported |
 | Synthetic catalog of hidden built-in commands | not supported |
+
+## Who this is for
+
+This repository is a good fit if you:
+
+- use Pi interactively and often type slash commands inside longer prompts;
+- want `/home/...` or `/tmp/...` inputs to stay normal messages;
+- want an extension-layer solution without maintaining a Pi core fork.
+
+It is probably not the right fit if you need a full built-in slash catalog or want to change core first-line slash behavior.
 
 <!-- verifier:readme/architecture -->
 ## How it works
@@ -75,6 +100,8 @@ The package entrypoint is `extensions/inline-slash.ts`, and `package.json` decla
 ```bash
 pi install /absolute/path/to/pi-inline-slash-extension
 ```
+
+This is the recommended setup for normal use.
 
 ### Direct path wiring
 
@@ -197,6 +224,20 @@ Reasons to revisit an upstream patch:
 - change core handling for `/unknown`;
 - change the standard first-line slash behavior instead of delegating to core;
 - remove the remaining dependency on editor internals for more reliable compatibility.
+
+## FAQ
+
+### Does this patch Pi core?
+
+No. The extension stays at the extension layer and keeps the standard first-line slash path delegated to core.
+
+### Does it change how unknown slash commands work?
+
+No. `/unknown` intentionally stays on the normal core path.
+
+### Does it expose every built-in slash command inline?
+
+No. The inline catalog is built from public `pi.getCommands()` output only.
 
 ## Related docs
 

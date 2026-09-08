@@ -1,6 +1,6 @@
 {
   "name": "@datspike/pi-inline-slash-extension",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Pi extension for inline slash autocomplete, prompt-template expansion, and absolute-path submit bypass.",
   "private": false,
   "type": "module",

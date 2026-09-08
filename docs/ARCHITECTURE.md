@@ -12,7 +12,7 @@ Runtime flow:
 4. After initialization, the handler transforms exact public `source="prompt"` tokens; extension-generated input is passed through.
 5. `src/inline-slash/prompt-expansion.ts` reads `sourceInfo.path`, removes YAML frontmatter, and preserves Markdown bodies while skipping code regions and leading core invocations.
 6. `src/inline-slash/editor.ts` wraps `CustomEditor` and wires the inline autocomplete provider when UI is available.
-7. `createInlineSlashSubmitStrategy` decides whether submit stays on the core path or uses `sendUserMessage` for a leading absolute path.
+7. `createInlineSlashSubmitStrategy` decides whether submit stays on the core path or uses `sendUserMessage` for a leading absolute path; the package entrypoint expands later prompt segments before that bypass sends the message.
 8. `ctx.ui.setEditorComponent(...)` registers the wrapped editor.
 
 ## Main files

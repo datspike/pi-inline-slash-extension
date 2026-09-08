@@ -676,6 +676,7 @@ describe("inline slash extension entrypoint", () => {
     extensionPath: string,
   ) {
     const handlers = new Map<string, (event: unknown, ctx: any) => void>();
+    const sendUserMessage = vi.fn();
     let editorFactory:
       | ((tui: unknown, theme: unknown, keybindings: unknown) => { setAutocompleteProvider: unknown; handleInput: unknown; onSubmit: unknown })
       | undefined;
@@ -700,9 +701,17 @@ describe("inline slash extension entrypoint", () => {
             description: "Create skill",
             sourceInfo: sourceInfo("project", ".pi/skills/create-skill/SKILL.md"),
           },
+          {
+            name: "test-prompt",
+            source: "prompt",
+            description: "Test prompt expansion",
+            sourceInfo: sourceInfo("project", "package.json"),
+          },
         ];
       },
-      sendUserMessage() {},
+      sendUserMessage(text) {
+        sendUserMessage(text);
+      },
     });
 
     const sessionStartHandler = handlers.get("session_start");
@@ -725,6 +734,13 @@ describe("inline slash extension entrypoint", () => {
     expect(editor?.setAutocompleteProvider).toBeTypeOf("function");
     expect(editor?.handleInput).toBeTypeOf("function");
     expect(editor?.onSubmit).toBeTypeOf("function");
+
+    const submittedText = "/home/spike/file.ts\nInvestigate /test-prompt";
+    (editor?.onSubmit as ((text: string) => void) | undefined)?.(submittedText);
+
+    expect(sendUserMessage).toHaveBeenCalledOnce();
+    expect(sendUserMessage.mock.calls[0]?.[0]).toContain("/home/spike/file.ts\nInvestigate {\n");
+    expect(sendUserMessage.mock.calls[0]?.[0]).not.toContain("/test-prompt");
   }
 
   test("package-entrypoint-loader: package entrypoint imports and wiring reaches setEditorComponent", async () => {

@@ -47,7 +47,18 @@ export default function inlineSlashExtension(api: ExtensionAPI): void {
 
     const InlineSlashEditor = createInlineSlashEditorClass(CustomEditor as any, {
       catalog,
-      submitStrategy: createInlineSlashSubmitStrategy(api),
+      submitStrategy: createInlineSlashSubmitStrategy({
+        sendUserMessage: (text) => {
+          const result = expandInlinePromptTemplates(text, catalog!);
+
+          if (result.failures.length > 0) {
+            const failedTokens = [...new Set(result.failures.map((failure) => failure.token))].join(", ");
+            ctx.ui.notify(`Inline prompt expansion skipped for ${failedTokens}.`, "warning");
+          }
+
+          api.sendUserMessage(result.text);
+        },
+      }),
     });
 
     ctx.ui.setEditorComponent((tui, theme, keybindings) =>

@@ -104,6 +104,7 @@ require_fixed_pattern 'scenario:second-line-gsd' "manual checklist scenario seco
 require_fixed_pattern 'scenario:inline-prompt-expansion' "manual checklist scenario inline-prompt-expansion"
 require_fixed_pattern 'scenario:inline-prompt-protection' "manual checklist scenario inline-prompt-protection"
 require_fixed_pattern 'scenario:path-home-submit-bypass' "manual checklist scenario path-home-submit-bypass"
+require_fixed_pattern 'scenario:path-with-inline-prompt' "manual checklist scenario path-with-inline-prompt"
 require_fixed_pattern 'scenario:path-tmp-submit-bypass' "manual checklist scenario path-tmp-submit-bypass"
 require_fixed_pattern 'scenario:delegate-gsd-submit' "manual checklist scenario delegate-gsd-submit"
 require_fixed_pattern 'scenario:delegate-skill-submit' "manual checklist scenario delegate-skill-submit"
@@ -129,6 +130,7 @@ cat <<'CHECKLIST'
 - scenario:inline-prompt-expansion -> submit ordinary text containing `/ru-clean` and confirm the public prompt body is expanded.
 - scenario:inline-prompt-protection -> confirm fenced code, inline code, escapes, and a leading `/prompt` invocation remain safe.
 - scenario:path-home-submit-bypass -> type `/home/spike/file.ts` and press Enter; expected result is normal user-message behavior without `Unknown command`.
+- scenario:path-with-inline-prompt -> submit a leading absolute path followed by `/ru-clean`; expected result is a literal path plus the expanded prompt body.
 - scenario:path-tmp-submit-bypass -> type `/tmp/log.txt` and press Enter; expected result is the same bypass through a normal message.
 - scenario:delegate-gsd-submit -> on the first line type `/gsd auto` and press Enter; expected result is the normal slash command path.
 - scenario:delegate-skill-submit -> on the first line type `/skill:create-skill demo` and press Enter; expected result is the normal skill submit path.

@@ -53,6 +53,7 @@ After loading the extension in Pi, run `/reload` and verify:
 - `scenario:inline-skill-mid-line` -> type `text /skill:create` and confirm that `/skill:create-skill` appears.
 - `scenario:second-line-gsd` -> on the second line type `/gs` and confirm that `/gsd` appears.
 - `scenario:inline-prompt-expansion` -> submit ordinary text containing `/ru-clean` and confirm the Markdown body is expanded.
+- `scenario:path-with-inline-prompt` -> submit a leading absolute path followed by `/ru-clean`; confirm the path bypass still expands the later prompt segment.
 - `scenario:inline-prompt-protection` -> verify leading delegation, code fences, inline code, escapes, missing files, unknown tokens, and skill tokens.
 - `scenario:path-home-submit-bypass` -> type `/home/spike/file.ts` and press Enter; expected result is normal user-message behavior without `Unknown command`.
 - `scenario:path-tmp-submit-bypass` -> type `/tmp/log.txt` and press Enter; expected result is the same bypass through a normal message.

@@ -187,6 +187,7 @@ Automated proof covers the shipped user-facing behavior:
 - second line `/gs` -> autocomplete works without a first-line restriction;
 - `/home/spike/file.ts` and `/tmp/log.txt` bypass slash dispatch on submit;
 - ordinary text with `/ru-clean` expands the prompt body, including multiple and multiline segments;
+- a message that starts with an absolute path still expands later prompt segments before `sendUserMessage`;
 - leading `/ru-clean args`, code blocks, inline code, `\\/ru-clean`, missing files, unknown tokens, and skill tokens follow their safe boundaries;
 - `/gsd auto`, `/skill:create-skill demo`, and `/unknown` remain on the delegated core submit path.
 
@@ -224,6 +225,7 @@ After loading the extension in Pi, run `/reload` and verify the following scenar
 - `scenario:inline-prompt-expansion` -> submit ordinary text containing `/ru-clean` and confirm the Markdown body is expanded.
 - `scenario:inline-prompt-protection` -> verify leading delegation, code fences, inline code, escapes, missing files, unknown tokens, and skill tokens.
 - `scenario:path-home-submit-bypass` -> type `/home/spike/file.ts` and press Enter; expected result is normal user-message behavior without `Unknown command`.
+- `scenario:path-with-inline-prompt` -> submit an absolute path followed by ordinary text and `/ru-clean`; expect the path to stay literal and the prompt body to expand.
 - `scenario:path-tmp-submit-bypass` -> type `/tmp/log.txt` and press Enter; expected result is the same bypass through a normal message.
 - `scenario:delegate-gsd-submit` -> on the first line type `/gsd auto` and press Enter; expected result is the normal slash command path.
 - `scenario:delegate-skill-submit` -> on the first line type `/skill:create-skill demo` and press Enter; expected result is the normal skill submit path.

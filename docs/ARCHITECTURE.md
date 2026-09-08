@@ -6,11 +6,12 @@ The extension keeps Pi core untouched and adds behavior at the extension layer.
 
 Runtime flow:
 
-1. `extensions/inline-slash.ts` activates on `session_start` when `ctx.hasUI` is true.
-2. `buildCommandCatalog(api.getCommands())` builds a local catalog from public commands.
-3. `src/inline-slash/editor.ts` wraps `CustomEditor` and wires the inline autocomplete provider.
-4. `createInlineSlashSubmitStrategy` decides whether submit stays on the core path or uses `sendUserMessage` for a leading absolute path.
-5. `ctx.ui.setEditorComponent(...)` registers the wrapped editor.
+1. `extensions/inline-slash.ts` builds a local catalog from public commands and registers the `input` handler.
+2. The `input` handler transforms only interactive/RPC text containing exact public `source="prompt"` tokens; extension-generated input is passed through.
+3. `src/inline-slash/prompt-expansion.ts` reads `sourceInfo.path`, removes YAML frontmatter, and preserves Markdown bodies while skipping code regions and leading core invocations.
+4. `src/inline-slash/editor.ts` wraps `CustomEditor` and wires the inline autocomplete provider.
+5. `createInlineSlashSubmitStrategy` decides whether submit stays on the core path or uses `sendUserMessage` for a leading absolute path.
+6. `ctx.ui.setEditorComponent(...)` registers the wrapped editor.
 
 ## Main files
 
@@ -21,6 +22,7 @@ Runtime flow:
 | `src/inline-slash/provider.ts` | inline autocomplete provider for mid-line and second-line slash suggestions |
 | `src/inline-slash/classifier.ts` | submit routing boundary for command vs absolute path |
 | `src/inline-slash/editor.ts` | editor wrapper and `createInlineSlashSubmitStrategy` |
+| `src/inline-slash/prompt-expansion.ts` | pure prompt-template expansion and Markdown protection |
 | `docs/UPSTREAM-SEAMS.md` | remaining upstream seam request |
 
 ## Public boundaries
@@ -30,13 +32,15 @@ The shipped behavior intentionally stays inside a small set of public seams:
 - `ctx.ui.setEditorComponent(...)`
 - `CustomEditor`
 - `pi.getCommands()`
+- `input` event transform result
 - `sendUserMessage`
 - editor methods such as `getText()`, `getLines()`, `getCursor()`, `setAutocompleteProvider()`
 
 Behavioral boundaries:
 
 - the catalog is built from `pi.getCommands()` only;
-- `sourceInfo` is treated as the canonical provenance contract;
+- prompt expansion uses only `source="prompt"` entries and treats `sourceInfo.path` as the canonical template path;
+- read failures leave their token unchanged and may produce a compact UI warning;
 - `/unknown` stays on the delegated core path;
 - non-slash autocomplete such as `@` references stays delegated to the core provider;
 - first-line slash behavior remains core behavior.

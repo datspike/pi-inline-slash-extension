@@ -1,6 +1,6 @@
 # @datspike/pi-inline-slash-extension
 
-Installable Pi extension that makes slash autocomplete work where people actually type: inside normal text and on the second line. It also stops leading absolute paths such as `/home/spike/file.ts` from being misrouted as slash commands.
+Installable Pi extension that makes slash autocomplete work where people actually type: inside normal text and on the second line. It also expands public prompt templates inside ordinary text and stops leading absolute paths such as `/home/spike/file.ts` from being misrouted as slash commands.
 
 If you found this repo from GitHub search, the practical summary is simple: install it, run `/reload`, and you get better inline slash UX without forking Pi core.
 
@@ -10,6 +10,7 @@ Pi already handles slash commands well at the start of the first line. This exte
 
 - inline slash autocomplete inside regular text;
 - slash autocomplete on the second line;
+- inline expansion of public prompt templates such as `/ru-clean`;
 - submit bypass for a leading absolute path such as `/tmp/log.txt`.
 
 ## Demo
@@ -22,6 +23,7 @@ text /gs             -> no useful inline slash completion
 After:
 text /gs             -> suggests /gsd
 text /skill:create   -> suggests /skill:create-skill
+text /ru-clean       -> expands the public prompt body
 /home/spike/file.ts  -> sent as a normal user message
 ```
 
@@ -31,8 +33,10 @@ text /skill:create   -> suggests /skill:create-skill
 What is actually shipped:
 
 - inline slash and skill autocomplete works not only at the start of the first line, but also mid-line and on the second line;
+- known public prompt commands expand to their UTF-8 Markdown body inside ordinary text, including multiple tokens and multiline input;
+- leading prompt invocations remain delegated to core so template arguments keep working;
+- fenced code, inline code, escaped tokens, unknown slash tokens, skills, and absolute paths remain safe;
 - a leading absolute path such as `/home/spike/file.ts` or `/tmp/log.txt` is sent as a normal user message instead of being treated as a slash command;
-- the first-line start-of-line slash path remains delegated core behavior;
 - the current scope is proven by local tests and shell verifiers, without an upstream patch.
 
 ## Quick start
@@ -55,7 +59,7 @@ pi install npm:@datspike/pi-inline-slash-extension
 - type `text /skill:create` -> expect `/skill:create-skill` autocomplete;
 - type `/home/spike/file.ts` and press Enter -> expect a normal user message, not command routing.
 
-If those three checks pass, the extension is wired correctly.
+If these checks pass, the extension is wired correctly.
 
 ## At a glance
 
@@ -64,6 +68,7 @@ If those three checks pass, the extension is wired correctly.
 | Mid-line slash autocomplete | supported |
 | Second-line slash autocomplete | supported |
 | Leading absolute path submit bypass | supported |
+| Inline public prompt-template expansion | supported |
 | Override of core first-line slash behavior | not supported |
 | Synthetic catalog of hidden built-in commands | not supported |
 
@@ -85,9 +90,10 @@ The extension is wired through the package entrypoint `extensions/inline-slash.t
 High-level flow:
 
 1. builds the public inline catalog via `buildCommandCatalog(api.getCommands())`;
-2. wraps `CustomEditor` via `src/inline-slash/editor.ts`;
-3. attaches submit routing through `createInlineSlashSubmitStrategy`;
-4. registers the editor through `ctx.ui.setEditorComponent(...)`.
+2. registers an `input` handler that expands only exact public `source="prompt"` tokens;
+3. wraps `CustomEditor` via `src/inline-slash/editor.ts`;
+4. attaches submit routing through `createInlineSlashSubmitStrategy`;
+5. registers the editor through `ctx.ui.setEditorComponent(...)`.
 
 Core is not patched. More detail: `docs/ARCHITECTURE.md`.
 
@@ -137,11 +143,13 @@ Main files:
 - `src/inline-slash/provider.ts`
 - `src/inline-slash/classifier.ts`
 - `src/inline-slash/editor.ts`
+- `src/inline-slash/prompt-expansion.ts`
 - `docs/UPSTREAM-SEAMS.md`
 
 Important boundaries:
 
 - the catalog is built from `pi.getCommands()` only;
+- prompt expansion reads only `source="prompt"` entries and uses `sourceInfo.path` as the template path;
 - `sourceInfo` is treated as the canonical provenance contract;
 - `sendUserMessage` is required only for the absolute-path bypass path;
 - `/unknown` stays on the delegated core path.
@@ -157,6 +165,8 @@ Automated proof covers the shipped user-facing behavior:
 - `text /skill:create` -> the local inline catalog suggests `/skill:create-skill`;
 - second line `/gs` -> autocomplete works without a first-line restriction;
 - `/home/spike/file.ts` and `/tmp/log.txt` bypass slash dispatch on submit;
+- ordinary text with `/ru-clean` expands the prompt body, including multiple and multiline segments;
+- leading `/ru-clean args`, code blocks, inline code, `\\/ru-clean`, missing files, unknown tokens, and skill tokens follow their safe boundaries;
 - `/gsd auto`, `/skill:create-skill demo`, and `/unknown` remain on the delegated core submit path.
 
 Detailed coverage and command breakdown: `docs/VERIFICATION.md`.
@@ -190,6 +200,8 @@ After loading the extension in Pi, run `/reload` and verify the following scenar
 - `scenario:inline-gsd-mid-line` -> type `text /gs` and confirm that `/gsd` autocomplete appears.
 - `scenario:inline-skill-mid-line` -> type `text /skill:create` and confirm that `/skill:create-skill` appears.
 - `scenario:second-line-gsd` -> on the second line type `/gs` and confirm that `/gsd` appears.
+- `scenario:inline-prompt-expansion` -> submit ordinary text containing `/ru-clean` and confirm the Markdown body is expanded.
+- `scenario:inline-prompt-protection` -> verify leading delegation, code fences, inline code, escapes, missing files, unknown tokens, and skill tokens.
 - `scenario:path-home-submit-bypass` -> type `/home/spike/file.ts` and press Enter; expected result is normal user-message behavior without `Unknown command`.
 - `scenario:path-tmp-submit-bypass` -> type `/tmp/log.txt` and press Enter; expected result is the same bypass through a normal message.
 - `scenario:delegate-gsd-submit` -> on the first line type `/gsd auto` and press Enter; expected result is the normal slash command path.
@@ -201,6 +213,8 @@ After loading the extension in Pi, run `/reload` and verify the following scenar
 
 - the inline catalog is built only from public `pi.getCommands()` output and does not synthesize a full built-in slash catalog;
 - only public sources `extension`, `prompt`, `skill` are accepted;
+- prompt expansion is limited to exact whitespace-delimited tokens with no inline arguments;
+- prompt files that cannot be read remain literal and produce a compact UI warning when available;
 - first-line start-of-message slash autocomplete remains delegated core behavior;
 - non-slash autocomplete contexts such as `@` file references stay delegated to the core provider;
 - submit bypass looks only at the leading token after `trim()`: a leading absolute path is bypassed, everything else goes to core submit;

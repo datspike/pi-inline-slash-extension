@@ -31,6 +31,8 @@ cat <<'CHECKLIST'
 - scenario:inline-gsd-mid-line -> type `text /gs` and confirm that `/gsd` autocomplete appears.
 - scenario:inline-skill-mid-line -> type `text /skill:create` and confirm that `/skill:create-skill` appears.
 - scenario:second-line-gsd -> on the second line type `/gs` and confirm that `/gsd` appears.
+- scenario:inline-prompt-expansion -> submit ordinary text containing `/ru-clean` and confirm the Markdown body is expanded.
+- scenario:inline-prompt-protection -> verify leading delegation, code fences, inline code, escapes, missing files, unknown tokens, and skill tokens.
 - scenario:start-of-line-regression-gsd -> on the first line type `/gsd auto` and confirm the standard start-of-line scenario is still intact.
 - scenario:start-of-line-regression-skill -> on the first line type `/skill:create-skill` and confirm the upstream slash path still works.
 - scenario:s02-boundary -> submit-time absolute path `/home/...` is intentionally not claimed here and remains covered by S02.

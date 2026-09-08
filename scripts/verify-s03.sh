@@ -13,6 +13,8 @@ readonly REQUIRED_FILES=(
   "src/inline-slash/command-catalog.ts"
   "src/inline-slash/editor.ts"
   "src/inline-slash/provider.ts"
+  "src/inline-slash/prompt-expansion.ts"
+  "tests/inline-slash/prompt-expansion.test.ts"
   "tests/inline-slash/editor-smoke.test.ts"
   "tests/inline-slash/provider.test.ts"
   "tests/inline-slash/submit-routing.test.ts"
@@ -99,6 +101,8 @@ require_fixed_pattern 'bash scripts/verify-s03.sh' "top-level shell verifier s03
 require_fixed_pattern 'scenario:inline-gsd-mid-line' "manual checklist scenario inline-gsd-mid-line"
 require_fixed_pattern 'scenario:inline-skill-mid-line' "manual checklist scenario inline-skill-mid-line"
 require_fixed_pattern 'scenario:second-line-gsd' "manual checklist scenario second-line-gsd"
+require_fixed_pattern 'scenario:inline-prompt-expansion' "manual checklist scenario inline-prompt-expansion"
+require_fixed_pattern 'scenario:inline-prompt-protection' "manual checklist scenario inline-prompt-protection"
 require_fixed_pattern 'scenario:path-home-submit-bypass' "manual checklist scenario path-home-submit-bypass"
 require_fixed_pattern 'scenario:path-tmp-submit-bypass' "manual checklist scenario path-tmp-submit-bypass"
 require_fixed_pattern 'scenario:delegate-gsd-submit' "manual checklist scenario delegate-gsd-submit"
@@ -122,6 +126,8 @@ cat <<'CHECKLIST'
 - scenario:inline-gsd-mid-line -> type `text /gs` and confirm that `/gsd` autocomplete appears.
 - scenario:inline-skill-mid-line -> type `text /skill:create` and confirm that `/skill:create-skill` appears.
 - scenario:second-line-gsd -> on the second line type `/gs` and confirm that `/gsd` appears.
+- scenario:inline-prompt-expansion -> submit ordinary text containing `/ru-clean` and confirm the public prompt body is expanded.
+- scenario:inline-prompt-protection -> confirm fenced code, inline code, escapes, and a leading `/prompt` invocation remain safe.
 - scenario:path-home-submit-bypass -> type `/home/spike/file.ts` and press Enter; expected result is normal user-message behavior without `Unknown command`.
 - scenario:path-tmp-submit-bypass -> type `/tmp/log.txt` and press Enter; expected result is the same bypass through a normal message.
 - scenario:delegate-gsd-submit -> on the first line type `/gsd auto` and press Enter; expected result is the normal slash command path.

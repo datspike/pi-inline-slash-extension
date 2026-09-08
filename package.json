@@ -1,7 +1,7 @@
 {
   "name": "@datspike/pi-inline-slash-extension",
   "version": "0.1.0",
-  "description": "Pi extension that adds inline slash autocomplete and absolute-path submit bypass without forking core.",
+  "description": "Pi extension for inline slash autocomplete, prompt-template expansion, and absolute-path submit bypass.",
   "private": false,
   "type": "module",
   "license": "MIT",
@@ -13,7 +13,7 @@
   "bugs": {
     "url": "https://github.com/datspike/pi-inline-slash-extension/issues"
   },
-  "keywords": ["pi-package", "pi", "extension", "autocomplete", "slash-commands"],
+  "keywords": ["pi-package", "pi", "extension", "autocomplete", "slash-commands", "prompt-templates"],
   "files": [
     "extensions",
     "src",

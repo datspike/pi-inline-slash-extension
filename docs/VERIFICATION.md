@@ -28,6 +28,8 @@ bash scripts/verify-s02.sh
 
 The repository currently proves these user-facing scenarios:
 
+`/ru-clean` is a representative loaded prompt used by the checks; it is not bundled with this package.
+
 - `text /gs` suggests `/gsd`;
 - `text /skill:create` suggests `/skill:create-skill`;
 - slash autocomplete works on the second line;

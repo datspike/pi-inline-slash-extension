@@ -6,12 +6,14 @@ The extension keeps Pi core untouched and adds behavior at the extension layer.
 
 Runtime flow:
 
-1. `extensions/inline-slash.ts` builds a local catalog from public commands and registers the `input` handler.
-2. The `input` handler transforms only interactive/RPC text containing exact public `source="prompt"` tokens; extension-generated input is passed through.
-3. `src/inline-slash/prompt-expansion.ts` reads `sourceInfo.path`, removes YAML frontmatter, and preserves Markdown bodies while skipping code regions and leading core invocations.
-4. `src/inline-slash/editor.ts` wraps `CustomEditor` and wires the inline autocomplete provider.
-5. `createInlineSlashSubmitStrategy` decides whether submit stays on the core path or uses `sendUserMessage` for a leading absolute path.
-6. `ctx.ui.setEditorComponent(...)` registers the wrapped editor.
+1. `extensions/inline-slash.ts` registers the `input` handler without calling action methods during extension loading.
+2. On `session_start`, `buildCommandCatalog(api.getCommands())` builds a local catalog from public commands.
+3. Before `session_start`, the input handler passes text through because no catalog is available yet.
+4. After initialization, the handler transforms exact public `source="prompt"` tokens; extension-generated input is passed through.
+5. `src/inline-slash/prompt-expansion.ts` reads `sourceInfo.path`, removes YAML frontmatter, and preserves Markdown bodies while skipping code regions and leading core invocations.
+6. `src/inline-slash/editor.ts` wraps `CustomEditor` and wires the inline autocomplete provider when UI is available.
+7. `createInlineSlashSubmitStrategy` decides whether submit stays on the core path or uses `sendUserMessage` for a leading absolute path.
+8. `ctx.ui.setEditorComponent(...)` registers the wrapped editor.
 
 ## Main files
 

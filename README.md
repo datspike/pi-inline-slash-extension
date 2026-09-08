@@ -10,7 +10,7 @@ Pi already handles slash commands well at the start of the first line. This exte
 
 - inline slash autocomplete inside regular text;
 - slash autocomplete on the second line;
-- inline expansion of public prompt templates such as `/ru-clean`;
+- inline expansion of loaded public prompt templates such as `/ru-clean`;
 - submit bypass for a leading absolute path such as `/tmp/log.txt`.
 
 ## Demo
@@ -57,9 +57,29 @@ pi install npm:@datspike/pi-inline-slash-extension
 
 - type `text /gs` -> expect `/gsd` autocomplete;
 - type `text /skill:create` -> expect `/skill:create-skill` autocomplete;
+- if a prompt template such as `/ru-clean` is already loaded, submit `text /ru-clean` -> expect its Markdown body inside the user message;
 - type `/home/spike/file.ts` and press Enter -> expect a normal user message, not command routing.
 
 If these checks pass, the extension is wired correctly.
+
+## Inline prompt segments
+
+This package expands prompt templates discovered through Pi's public `getCommands()` catalog. It does not ship `/ru-clean` or other prompt content itself; those templates come from your global/project prompt directories or other installed packages.
+
+Use an exact whitespace-delimited prompt command inside ordinary text:
+
+```text
+Fix the bug /ru-clean
+Implement and verify /two-sessions /ru-clean
+```
+
+Several segments may appear in one multiline message. Inline segments do not accept arguments because their boundary would be ambiguous. A prompt command at the beginning of the message remains delegated to Pi core, so normal template arguments still work.
+
+Use a backslash when the slash command must stay literal:
+
+```text
+Show the token \/ru-clean without expanding it.
+```
 
 ## At a glance
 
@@ -85,15 +105,16 @@ It is probably not the right fit if you need a full built-in slash catalog or wa
 <!-- verifier:readme/architecture -->
 ## How it works
 
-The extension is wired through the package entrypoint `extensions/inline-slash.ts` and activates on `session_start` when `ctx.hasUI` is true.
+The extension is wired through the package entrypoint `extensions/inline-slash.ts`. Prompt expansion works in every input-capable mode; the custom editor is installed only when `ctx.hasUI` is true.
 
 High-level flow:
 
-1. builds the public inline catalog via `buildCommandCatalog(api.getCommands())`;
-2. registers an `input` handler that expands only exact public `source="prompt"` tokens;
-3. wraps `CustomEditor` via `src/inline-slash/editor.ts`;
-4. attaches submit routing through `createInlineSlashSubmitStrategy`;
-5. registers the editor through `ctx.ui.setEditorComponent(...)`.
+1. registers the `input` handler without calling runtime action methods during extension loading;
+2. after `session_start`, builds the public catalog via `buildCommandCatalog(api.getCommands())`;
+3. expands only exact public `source="prompt"` tokens;
+4. wraps `CustomEditor` via `src/inline-slash/editor.ts`;
+5. attaches submit routing through `createInlineSlashSubmitStrategy`;
+6. registers the editor through `ctx.ui.setEditorComponent(...)`.
 
 Core is not patched. More detail: `docs/ARCHITECTURE.md`.
 
@@ -213,6 +234,7 @@ After loading the extension in Pi, run `/reload` and verify the following scenar
 
 - the inline catalog is built only from public `pi.getCommands()` output and does not synthesize a full built-in slash catalog;
 - only public sources `extension`, `prompt`, `skill` are accepted;
+- the package does not provide prompt bodies; it expands prompt templates loaded by Pi from other sources;
 - prompt expansion is limited to exact whitespace-delimited tokens with no inline arguments;
 - prompt files that cannot be read remain literal and produce a compact UI warning when available;
 - first-line start-of-message slash autocomplete remains delegated core behavior;

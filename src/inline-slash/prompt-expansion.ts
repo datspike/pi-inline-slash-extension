@@ -171,6 +171,92 @@ function promptEntries(catalog: InlineSlashCatalog): Map<string, InlineSlashCata
   return entries;
 }
 
+const ARGUMENT_PLACEHOLDER_PATTERN = /\$\{(?:\d+|ARGUMENTS|@):-[^}]*\}|\$\{@:\d+(?::\d+)?\}|\$(?:ARGUMENTS|@|\d+)/;
+
+function parseCommandArgs(argsString: string): string[] {
+  const args: string[] = [];
+  let current = "";
+  let inQuote: '"' | "'" | null = null;
+
+  for (const char of argsString) {
+    if (inQuote) {
+      if (char === inQuote) {
+        inQuote = null;
+      } else {
+        current += char;
+      }
+    } else if (char === '"' || char === "'") {
+      inQuote = char;
+    } else if (char === " " || char === "\t") {
+      if (current.length > 0) {
+        args.push(current);
+        current = "";
+      }
+    } else {
+      current += char;
+    }
+  }
+
+  if (current.length > 0) {
+    args.push(current);
+  }
+
+  return args;
+}
+
+function normalizeEscapedPromptTokens(text: string): string {
+  return text.replace(/(^|\s)\\\/(?=\S)/g, "$1/");
+}
+
+function substitutePromptArguments(content: string, args: readonly string[]): string {
+  const allArgs = args.join(" ");
+  let result = content;
+
+  result = result.replace(
+    /\$\{(\d+|ARGUMENTS|@):-([^}]*)\}/g,
+    (_match, target, defaultValue) => {
+      const value = target === "@" || target === "ARGUMENTS"
+        ? allArgs
+        : args[Number.parseInt(target, 10) - 1];
+      return value || defaultValue;
+    },
+  );
+
+  result = result.replace(/\$(\d+)/g, (_match, number) =>
+    args[Number.parseInt(number, 10) - 1] ?? "",
+  );
+
+  result = result.replace(/\$\{@:(\d+)(?::(\d+))?\}/g,
+    (_match, startText, lengthText) => {
+      const start = Math.max(Number.parseInt(startText, 10) - 1, 0);
+      if (lengthText) {
+        return args.slice(start, start + Number.parseInt(lengthText, 10)).join(" ");
+      }
+      return args.slice(start).join(" ");
+    },
+  );
+
+  result = result.replace(/\$ARGUMENTS/g, allArgs);
+  result = result.replace(/\$@/g, allArgs);
+  return result;
+}
+
+function hasPromptArguments(body: string): boolean {
+  return ARGUMENT_PLACEHOLDER_PATTERN.test(body);
+}
+
+function isPromptToken(
+  token: string,
+  entries: ReadonlyMap<string, InlineSlashCatalogEntry>,
+  protectedTextRanges: readonly TextRange[],
+  start: number,
+ ): boolean {
+  return !rangeAt(protectedTextRanges, start)
+    && token.startsWith("/")
+    && !token.startsWith("\\/")
+    && entries.has(token.slice(1).toLowerCase());
+}
+
 function compactError(error: unknown): string {
   if (error instanceof Error && error.message.trim().length > 0) {
     return error.message.trim();
@@ -182,6 +268,7 @@ function compactError(error: unknown): string {
 /**
  * Expand exact public prompt-command tokens outside Markdown code regions.
  * The first known prompt token remains untouched for Pi core argument handling.
+ * Inline prompt arguments are consumed only when the template declares placeholders.
  */
 export function expandInlinePromptTemplates(
   text: string,
@@ -191,7 +278,11 @@ export function expandInlinePromptTemplates(
   const entries = promptEntries(catalog);
   const firstToken = /\S+/.exec(text)?.[0];
 
-  if (firstToken && firstToken.startsWith("/") && !firstToken.startsWith("\\/") && entries.has(firstToken.slice(1).toLowerCase())) {
+  if (firstToken?.startsWith("\\/")) {
+    return { text, changed: false, failures: [] };
+  }
+
+  if (firstToken && isPromptToken(firstToken, entries, [], 0)) {
     return { text, changed: false, failures: [] };
   }
 
@@ -204,13 +295,20 @@ export function expandInlinePromptTemplates(
   const cache = new Map<string, CachedTemplate>();
   const failures: PromptExpansionFailure[] = [];
   const parts: string[] = [];
+  const matches = [...text.matchAll(/\S+/g)].map((match) => ({
+    token: match[0] ?? "",
+    start: match.index ?? 0,
+    end: (match.index ?? 0) + (match[0]?.length ?? 0),
+  }));
   let cursor = 0;
   let changed = false;
 
-  for (const match of text.matchAll(/\S+/g)) {
-    const token = match[0] ?? "";
-    const start = match.index ?? 0;
-    const end = start + token.length;
+  for (let index = 0; index < matches.length; index += 1) {
+    const { token, start, end } = matches[index]!;
+
+    if (start < cursor) {
+      continue;
+    }
 
     if (rangeAt(protectedTextRanges, start)) {
       continue;
@@ -228,13 +326,11 @@ export function expandInlinePromptTemplates(
     }
 
     const entry = entries.get(token.slice(1).toLowerCase());
-
     if (!entry) {
       continue;
     }
 
     let cached = cache.get(entry.sourceInfo.path);
-
     if (!cached) {
       try {
         cached = { body: stripYamlFrontmatter(readTemplate(entry.sourceInfo.path)) };
@@ -257,8 +353,26 @@ export function expandInlinePromptTemplates(
       continue;
     }
 
-    parts.push(text.slice(cursor, start), cached.body);
-    cursor = end;
+    let replacement = cached.body;
+    let consumeEnd = end;
+
+    if (hasPromptArguments(cached.body)) {
+      const nextPromptStart = matches.slice(index + 1).find((candidate) =>
+        isPromptToken(candidate.token, entries, protectedTextRanges, candidate.start),
+      )?.start ?? text.length;
+      const rawArguments = text.slice(end, nextPromptStart);
+      const trailingWhitespace = rawArguments.match(/[ \t]*$/)?.[0].length ?? 0;
+      const argumentText = rawArguments.slice(0, rawArguments.length - trailingWhitespace);
+
+      replacement = substitutePromptArguments(
+        cached.body,
+        parseCommandArgs(normalizeEscapedPromptTokens(argumentText)),
+      );
+      consumeEnd = end + argumentText.length;
+    }
+
+    parts.push(text.slice(cursor, start), replacement);
+    cursor = consumeEnd;
     changed = true;
   }
 

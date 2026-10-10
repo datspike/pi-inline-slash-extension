@@ -10,7 +10,7 @@ Runtime flow:
 2. On `session_start`, `buildCommandCatalog(api.getCommands())` builds a local catalog from public commands.
 3. Before `session_start`, the input handler passes text through because no catalog is available yet.
 4. After initialization, the handler transforms exact public `source="prompt"` tokens; extension-generated input is passed through.
-5. `src/inline-slash/prompt-expansion.ts` reads `sourceInfo.path`, removes YAML frontmatter, and preserves Markdown bodies while skipping code regions and leading core invocations.
+5. `src/inline-slash/prompt-expansion.ts` reads `sourceInfo.path`, removes YAML frontmatter, preserves Markdown bodies while skipping code regions and leading core invocations, and consumes arguments only for templates that declare placeholders.
 6. `src/inline-slash/editor.ts` wraps `CustomEditor` and wires the inline autocomplete provider when UI is available.
 7. `createInlineSlashSubmitStrategy` decides whether submit stays on the core path or uses `sendUserMessage` for a leading absolute path; the package entrypoint expands later prompt segments before that bypass sends the message.
 8. `ctx.ui.setEditorComponent(...)` registers the wrapped editor.
@@ -41,7 +41,7 @@ The shipped behavior intentionally stays inside a small set of public seams:
 Behavioral boundaries:
 
 - the catalog is built from `pi.getCommands()` only;
-- prompt expansion uses only `source="prompt"` entries and treats `sourceInfo.path` as the canonical template path;
+- prompt expansion uses only `source="prompt"` entries and treats `sourceInfo.path` as the canonical template path; parameterized inline templates consume text up to the next known prompt token;
 - read failures leave their token unchanged and may produce a compact UI warning;
 - `/unknown` stays on the delegated core path;
 - non-slash autocomplete such as `@` references stays delegated to the core provider;

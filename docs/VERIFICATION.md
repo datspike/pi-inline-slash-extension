@@ -33,8 +33,8 @@ The repository currently proves these user-facing scenarios:
 - `text /gs` suggests `/gsd`;
 - `text /skill:create` suggests `/skill:create-skill`;
 - slash autocomplete works on the second line;
-- public prompt bodies expand for exact mid-line and multiline tokens, including multiple segments;
-- leading prompt invocations remain delegated, while fenced code, inline code, escapes, missing files, unknown tokens, and skills stay safe;
+- public prompt bodies expand for exact mid-line and multiline tokens, including multiple segments; parameterized templates consume natural-language arguments up to the next known prompt token;
+- leading prompt invocations remain delegated, while templates without placeholders, fenced code, inline code, escapes, missing files, unknown tokens, and skills stay safe;
 - `/home/spike/file.ts` and `/tmp/log.txt` bypass slash dispatch on submit;
 - `/gsd auto`, `/skill:create-skill demo`, and `/unknown` stay on the delegated core submit path.
 
@@ -53,6 +53,7 @@ After loading the extension in Pi, run `/reload` and verify:
 - `scenario:inline-skill-mid-line` -> type `text /skill:create` and confirm that `/skill:create-skill` appears.
 - `scenario:second-line-gsd` -> on the second line type `/gs` and confirm that `/gsd` appears.
 - `scenario:inline-prompt-expansion` -> submit ordinary text containing `/ru-clean` and confirm the Markdown body is expanded.
+- `scenario:inline-prompt-arguments` -> submit ordinary text containing a parameterized prompt and natural-language arguments; confirm the arguments are substituted and the next known prompt remains available.
 - `scenario:path-with-inline-prompt` -> submit a leading absolute path followed by `/ru-clean`; confirm the path bypass still expands the later prompt segment.
 - `scenario:inline-prompt-protection` -> verify leading delegation, code fences, inline code, escapes, missing files, unknown tokens, and skill tokens.
 - `scenario:path-home-submit-bypass` -> type `/home/spike/file.ts` and press Enter; expected result is normal user-message behavior without `Unknown command`.

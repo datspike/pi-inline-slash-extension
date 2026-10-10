@@ -116,6 +116,16 @@ describe("expandInlinePromptTemplates", () => {
     expect(result.text).toBe("Литерал /ru-clean и BODY");
   });
 
+  test("leading-escape: preserves escaped prompt and skill tokens for core", () => {
+    const text = "\\/ru-clean \\/skill:commit-list";
+
+    expect(expandInlinePromptTemplates(text, createCatalog(), { readTemplate: () => "BODY" })).toEqual({
+      text,
+      changed: false,
+      failures: [],
+    });
+  });
+
   test("missing-unknown-skill: leaves failures and unsupported slash tokens unchanged", () => {
     const result = expandInlinePromptTemplates(
       "Путь /ru-clean /unknown /skill:commit-list /home/file.txt",
@@ -136,6 +146,150 @@ describe("expandInlinePromptTemplates", () => {
 
   test("frontmatter-without-block: keeps ordinary Markdown unchanged", () => {
     expect(stripYamlFrontmatter("# Заголовок\nТело")).toBe("# Заголовок\nТело");
+  });
+
+  test("inline-arguments: consumes natural-language arguments for parameterized prompts", () => {
+    const catalog = buildCommandCatalog([
+      {
+        name: "taskfiles-maintain",
+        source: "prompt",
+        sourceInfo: sourceInfo("/prompts/taskfiles-maintain.md"),
+      },
+    ]);
+
+    const result = expandInlinePromptTemplates(
+      "Перед /taskfiles-maintain сделай инвентаризацию и выбери новую работу",
+      catalog,
+      {
+        readTemplate: () => "Мой запрос: ${@:-инвентаризируй по умолчанию}",
+      },
+    );
+
+    expect(result.text).toBe("Перед Мой запрос: сделай инвентаризацию и выбери новую работу");
+    expect(result.failures).toEqual([]);
+  });
+
+  test("inline-arguments: preserves quoted values and stops at the next prompt", () => {
+    const catalog = buildCommandCatalog([
+      {
+        name: "first",
+        source: "prompt",
+        sourceInfo: sourceInfo("/prompts/first.md"),
+      },
+      {
+        name: "second",
+        source: "prompt",
+        sourceInfo: sourceInfo("/prompts/second.md"),
+      },
+    ]);
+
+    const bodies = new Map([
+      ["/prompts/first.md", "FIRST:$1|${@:-fallback}"],
+      ["/prompts/second.md", "SECOND"],
+    ]);
+
+    const result = expandInlinePromptTemplates(
+      "До /first \"два слова\" ещё /second конец",
+      catalog,
+      { readTemplate: (path) => bodies.get(path) ?? "" },
+    );
+
+    expect(result.text).toBe("До FIRST:два слова|два слова ещё SECOND конец");
+  });
+
+  test("inline-arguments: keeps newline inside an argument like core Pi", () => {
+    const catalog = buildCommandCatalog([
+      {
+        name: "first",
+        source: "prompt",
+        sourceInfo: sourceInfo("/prompts/first.md"),
+      },
+    ]);
+
+    const result = expandInlinePromptTemplates(
+      "До /first one\ntwo",
+      catalog,
+      { readTemplate: () => "$1|$2|$@" },
+    );
+
+    expect(result.text).toBe("До one\ntwo||one\ntwo");
+  });
+
+  test("inline-arguments: normalizes escaped prompt tokens inside consumed arguments", () => {
+    const catalog = buildCommandCatalog([
+      {
+        name: "first",
+        source: "prompt",
+        sourceInfo: sourceInfo("/prompts/first.md"),
+      },
+      {
+        name: "second",
+        source: "prompt",
+        sourceInfo: sourceInfo("/prompts/second.md"),
+      },
+    ]);
+
+    const result = expandInlinePromptTemplates(
+      "До /first one \\/second конец",
+      catalog,
+      { readTemplate: () => "$@" },
+    );
+
+    expect(result.text).toBe("До one /second конец");
+  });
+
+  test("inline-arguments: preserves a trailing newline inside the argument", () => {
+    const catalog = buildCommandCatalog([
+      {
+        name: "first",
+        source: "prompt",
+        sourceInfo: sourceInfo("/prompts/first.md"),
+      },
+    ]);
+
+    const result = expandInlinePromptTemplates(
+      "До /first one\n",
+      catalog,
+      { readTemplate: () => "L<$@>R" },
+    );
+
+    expect(result.text).toBe("До L<one\n>R");
+  });
+
+  test("inline-arguments: follows core replacement order for placeholder-looking arguments", () => {
+    const catalog = buildCommandCatalog([
+      {
+        name: "first",
+        source: "prompt",
+        sourceInfo: sourceInfo("/prompts/first.md"),
+      },
+    ]);
+
+    const result = expandInlinePromptTemplates(
+      "До /first \"$@\" tail",
+      catalog,
+      { readTemplate: () => "$1" },
+    );
+
+    expect(result.text).toBe("До $@ tail");
+  });
+
+  test("inline-arguments: uses the template default when no inline arguments follow", () => {
+    const catalog = buildCommandCatalog([
+      {
+        name: "task",
+        source: "prompt",
+        sourceInfo: sourceInfo("/prompts/task.md"),
+      },
+    ]);
+
+    const result = expandInlinePromptTemplates(
+      "До /task",
+      catalog,
+      { readTemplate: () => "TASK:${@:-default request}" },
+    );
+
+    expect(result.text).toBe("До TASK:default request");
   });
 });
 

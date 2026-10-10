@@ -33,7 +33,7 @@ text /ru-clean       -> expands the public prompt body
 What is actually shipped:
 
 - inline slash and skill autocomplete works not only at the start of the first line, but also mid-line and on the second line;
-- known public prompt commands expand to their UTF-8 Markdown body inside ordinary text, including multiple tokens and multiline input;
+- known public prompt commands expand to their UTF-8 Markdown body inside ordinary text, including multiple tokens and multiline input; parameterized templates also consume natural-language arguments up to the next known prompt token;
 - leading prompt invocations remain delegated to core so template arguments keep working;
 - fenced code, inline code, escaped tokens, unknown slash tokens, skills, and absolute paths remain safe;
 - a leading absolute path such as `/home/spike/file.ts` or `/tmp/log.txt` is sent as a normal user message instead of being treated as a slash command;
@@ -73,7 +73,7 @@ Fix the bug /ru-clean
 Implement and verify /two-sessions /ru-clean
 ```
 
-Several segments may appear in one multiline message. Inline segments do not accept arguments because their boundary would be ambiguous. A prompt command at the beginning of the message remains delegated to Pi core, so normal template arguments still work.
+Several segments may appear in one multiline message. A prompt template with argument placeholders consumes the text after its inline token up to the next known prompt token and expands it with the same argument syntax as Pi core. Templates without placeholders keep the old behavior and leave following text in place. A prompt command at the beginning of the message remains delegated to Pi core, so normal template arguments still work.
 
 Use a backslash when the slash command must stay literal:
 
@@ -186,9 +186,9 @@ Automated proof covers the shipped user-facing behavior:
 - `text /skill:create` -> the local inline catalog suggests `/skill:create-skill`;
 - second line `/gs` -> autocomplete works without a first-line restriction;
 - `/home/spike/file.ts` and `/tmp/log.txt` bypass slash dispatch on submit;
-- ordinary text with `/ru-clean` expands the prompt body, including multiple and multiline segments;
+- ordinary text with `/ru-clean` expands the prompt body, including multiple and multiline segments; parameterized prompt templates consume natural-language inline arguments without swallowing the next known prompt;
 - a message that starts with an absolute path still expands later prompt segments before `sendUserMessage`;
-- leading `/ru-clean args`, code blocks, inline code, `\\/ru-clean`, missing files, unknown tokens, and skill tokens follow their safe boundaries;
+- leading `/ru-clean args`, inline prompt arguments, code blocks, inline code, `\/ru-clean`, missing files, unknown tokens, and skill tokens follow their safe boundaries;
 - `/gsd auto`, `/skill:create-skill demo`, and `/unknown` remain on the delegated core submit path.
 
 Detailed coverage and command breakdown: `docs/VERIFICATION.md`.
@@ -223,6 +223,7 @@ After loading the extension in Pi, run `/reload` and verify the following scenar
 - `scenario:inline-skill-mid-line` -> type `text /skill:create` and confirm that `/skill:create-skill` appears.
 - `scenario:second-line-gsd` -> on the second line type `/gs` and confirm that `/gsd` appears.
 - `scenario:inline-prompt-expansion` -> submit ordinary text containing `/ru-clean` and confirm the Markdown body is expanded.
+- `scenario:inline-prompt-arguments` -> submit ordinary text containing a parameterized prompt and natural-language arguments; expect the arguments inside the expanded body and the next known prompt preserved;
 - `scenario:inline-prompt-protection` -> verify leading delegation, code fences, inline code, escapes, missing files, unknown tokens, and skill tokens.
 - `scenario:path-home-submit-bypass` -> type `/home/spike/file.ts` and press Enter; expected result is normal user-message behavior without `Unknown command`.
 - `scenario:path-with-inline-prompt` -> submit an absolute path followed by ordinary text and `/ru-clean`; expect the path to stay literal and the prompt body to expand.
@@ -237,7 +238,7 @@ After loading the extension in Pi, run `/reload` and verify the following scenar
 - the inline catalog is built only from public `pi.getCommands()` output and does not synthesize a full built-in slash catalog;
 - only public sources `extension`, `prompt`, `skill` are accepted;
 - the package does not provide prompt bodies; it expands prompt templates loaded by Pi from other sources;
-- prompt expansion is limited to exact whitespace-delimited tokens with no inline arguments;
+- inline argument consumption is available only for prompt files that declare argument placeholders; templates without placeholders preserve following text;
 - prompt files that cannot be read remain literal and produce a compact UI warning when available;
 - first-line start-of-message slash autocomplete remains delegated core behavior;
 - non-slash autocomplete contexts such as `@` file references stay delegated to the core provider;

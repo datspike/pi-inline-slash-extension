@@ -248,7 +248,7 @@ After loading the extension in Pi, run `/reload` and verify the following scenar
 
 Compatibility baseline:
 
-- working and verified baseline: `@mariozechner/pi-coding-agent` `^0.65.0`.
+Runtime imports use `@earendil-works/pi-coding-agent` and `@earendil-works/pi-tui` with peer dependencies `>=1.3.0`. The regression suite and isolated TUI acceptance were verified on Pi `1.3.0` and `1.5.0`; other versions have not been validated.
 
 <!-- verifier:readme/upstream-patch-plan -->
 ## Upstream considerations

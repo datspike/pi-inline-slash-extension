@@ -1,4 +1,4 @@
-import type { SlashCommandInfo, SourceInfo } from "@mariozechner/pi-coding-agent";
+import type { SlashCommandInfo, SourceInfo } from "@earendil-works/pi-coding-agent";
 
 export type SlashCandidateKind = "command" | "skill" | "absolute-path";
 
